@@ -22,7 +22,6 @@ class AI_Dataset(Dataset):
             with open(imagefile_csv, "r") as f:
                 reader = csv.reader(f)
                 image_files = list(reader)[0]
-            image_files = image_files[:10000]###################################
             fold_size = len(image_files) // k_fold  # 等分
             fold = num_fold - 1
             if data_mode == "train":
