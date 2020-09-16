@@ -58,7 +58,7 @@ class AI_Dataset(Dataset):
             image, label = random_Top_Bottom_filp(image, label)
             image, label = random_Left_Right_filp(image, label)
 
-        # image, label = resize(self.crop_size, image, label)
+        image, label = resize(self.crop_size, image, label)
         label = label.squeeze(0)
 
         return{
@@ -87,7 +87,7 @@ class AI_PredictDataset(Dataset):
 
         image, _ = fetch(image_path)
         image, _ = convert_to_tensor(image)
-        # image, _ = resize(self.crop_size, image)
+        image, _ = resize(self.crop_size, image)
 
         return {
             "image": image,

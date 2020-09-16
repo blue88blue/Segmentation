@@ -5,9 +5,11 @@ from settings import basic_setting
 import matplotlib.pyplot as plt
 
 if __name__ == "__main__":
-    args = basic_setting()
+    data_root = "/home/mipav/dataset/AI+/train/image"
+    target_root = '/home/mipav/dataset/AI+/train/label'
+    crop_size = (256, 256)   # (h, w)
     mode = "train"
-    dataset = AI_Dataset(args.data_root, args.target_root, args.crop_size, mode)
+    dataset = AI_Dataset(data_root, target_root, crop_size, mode)
 
     batch = dataset[16423]
     image = batch["image"]
