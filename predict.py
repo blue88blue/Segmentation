@@ -16,13 +16,13 @@ from model.choose_model import seg_model
 pred_data_root = "/home/sjh/dataset/AI+/image_A"  # 预测图片路径
 pred_dir = "segmentation"     # mask
 map_dir = "segmentation_map"  # 概率图
-model_CPepoch = 140
+model_CPepoch = 30
 # #################################### predict settings 预测提交结果 ####################################
 
 
 def pred(model, device, args, num_fold=0):
     dataset_pred = AI_PredictDataset(pred_data_root, args.crop_size)
-    dataloader_pred = DataLoader(dataset_pred, batch_size=1, shuffle=False,
+    dataloader_pred = DataLoader(dataset_pred, batch_size=args.batch_size, shuffle=False,
                                  num_workers=args.num_workers,pin_memory=True, drop_last=True)
     model.eval()
     with torch.no_grad():
@@ -33,16 +33,16 @@ def pred(model, device, args, num_fold=0):
 
                 image = image.to(device, dtype=torch.float32)
                 outputs = model(image)
-                pred = F.interpolate(outputs[0], size=(256, 256), mode='bilinear', align_corners=True)
+                pred = outputs['main_out']
+                # pred = F.interpolate(outputs["main_out"], size=(256, 256), mode='bilinear', align_corners=True)
 
-                pred_mask = torch.max(torch.exp(pred.squeeze().cpu()), dim=0)[1]
-                pred_mask = pred_mask.squeeze().numpy()
-                pred_mask = Image.fromarray(np.uint8(pred_mask)*255).convert('L')
-                pred_mask.save(os.path.join(pred_dir[num_fold], file_name[0] + ".png"))
-                
-                pred_map = F.softmax(pred.squeeze().cpu(), dim=0)[1, :, :].numpy()*255
-                pred_map = Image.fromarray(np.uint8(pred_map)).convert('L')
-                pred_map.save(os.path.join(map_dir[num_fold], file_name[0] + ".png"))
+                for i in range(image.shape[0]):
+                    pred_i = pred[i, ...]
+                    pred_mask = torch.max(torch.exp(pred_i.squeeze().cpu()), dim=0)[1]
+                    pred_mask = pred_mask.squeeze().numpy()
+                    pred_mask = Image.fromarray(np.uint8(pred_mask)).convert('L')
+                    pred_mask.save(os.path.join(pred_dir[num_fold], file_name[i] + ".png"))
+
 
                 pbar.update(image.shape[0])
 

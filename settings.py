@@ -4,21 +4,21 @@ import csv
 
 class basic_setting():
 
-    mode = "train_test"                             # train,  test,  train_test
-    k_fold = None                              # None 不交叉验证 验证集即为训练集
+    mode = "test"                             # train,  test,  train_test
+    k_fold = 5                              # None 不交叉验证 验证集即为训练集
     start_fold = 0
-    end_fold = k_fold
+    end_fold = 1
 
     # #################################### train Data settings ####################################
     dataset_file_list = "utils/train_dataset_list.csv"  # 交叉验证所需文件名列表
     data_root = "/home/sjh/dataset/AI+/train/image"
     target_root = '/home/sjh/dataset/AI+/train/label'
     crop_size = (256, 256)
-    num_workers = 10
+    num_workers = 12
 
     # #################################### train file settings ####################################
     run_dir = "AI_256"                      # 数据集名称
-    val_step = 1                          # 每训练几个epoch进行一次验证
+    val_step = 3                          # 每训练几个epoch进行一次验证
 
     # #################################### model settings ####################################
     in_channel = 3
@@ -35,7 +35,7 @@ class basic_setting():
     # #################################### train settings ####################################
     class_weight = [1.16789861, 2.01992865, 0.67693378, 0.74623627, 1.4585703,  0.80229305, 2.42390565, 0.67258576]
     OHEM = False
-    num_epochs = 1
+    num_epochs = 100
     batch_size = 8
     aux_weight = 0.5
     dice_weight = 1
@@ -45,7 +45,7 @@ class basic_setting():
     # cuda_id = "0"
 
     # #################################### test settings ####################################
-    test_run_file = "2020-0916-2140_56_CENet_SF4-OHEM_fold_2"
+    test_run_file = "2020-0916-2213_22_CENet_SF4-OHEM_fold_5"
     label_names = ['water', 'traffic', 'building', 'farmland', 'grassland', 'forest', 'earth', 'other']
     plot = True  # 保存测试预测图片
 
