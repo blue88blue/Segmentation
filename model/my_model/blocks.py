@@ -48,9 +48,9 @@ class decoder_block(nn.Module):
             nn.BatchNorm2d(out_channel),
             nn.ReLU(),
 
-            nn.Conv2d(out_channel, out_channel, kernel_size=3, padding=1, bias=False),
-            nn.BatchNorm2d(out_channel),
-            nn.ReLU(),
+            # nn.Conv2d(out_channel, out_channel, kernel_size=3, padding=1, bias=False),
+            # nn.BatchNorm2d(out_channel),
+            # nn.ReLU(),
         )
 
         self.se = se
@@ -65,8 +65,8 @@ class decoder_block(nn.Module):
                 m.bias.data.zero_()
 
     def forward(self, x_h, x_l):
-        x_h_up = F.interpolate(x_h, size=x_l.size()[-2:], mode="bilinear", align_corners=True)
-        x = torch.cat((x_h_up, x_l), dim=1)
+        # x_h = F.interpolate(x_h, size=x_l.size()[-2:], mode="bilinear", align_corners=True)
+        x = torch.cat((x_h, x_l), dim=1)
         x = self.dconv(x)
         if self.se:
             x = self.selayer(x)

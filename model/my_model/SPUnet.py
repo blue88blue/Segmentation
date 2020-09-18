@@ -87,13 +87,17 @@ class SPSP(nn.Module):
         self.PPM = _PyramidPooling(in_channel, norm_layer=nn.BatchNorm2d, norm_kwargs=None)
 
         self.sconv1 = nn.Sequential(nn.Conv2d(in_channel, out_channel, (1, 3), 1, (0, 1), bias=False),
-                                    nn.BatchNorm2d(out_channel))
+                                    nn.BatchNorm2d(out_channel),
+                                    nn.ReLU(),
+                                    )
         self.sconv2 = nn.Sequential(nn.Conv2d(in_channel, out_channel, (3, 1), 1, (1, 0), bias=False),
-                                    nn.BatchNorm2d(out_channel))
+                                    nn.BatchNorm2d(out_channel),
+                                    nn.ReLU(),
+                                    )
         self.spool1 = nn.AdaptiveAvgPool2d((1, None))
         self.spool2 = nn.AdaptiveAvgPool2d((None, 1))
 
-        self.conv_out = conv_bn_relu(in_channel*2+out_channel, in_channel)
+        self.conv_out = conv_bn_relu((in_channel+out_channel)*2, in_channel)
 
     def forward(self, x):
         b, c, h, w = x.size()
@@ -103,10 +107,9 @@ class SPSP(nn.Module):
         # 条形池化
         s1 = F.interpolate(self.sconv1(self.spool1(x)), size=(h, w), mode="bilinear", align_corners=True)
         s2 = F.interpolate(self.sconv2(self.spool2(x)), size=(h, w), mode="bilinear", align_corners=True)
-        y2 = F.relu(s1 + s2)
 
         # concat
-        out = torch.cat((y1, y2), dim=1)
+        out = torch.cat((y1, s1, s2), dim=1)
         out = self.conv_out(out)
 
         return out

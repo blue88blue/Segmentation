@@ -162,9 +162,11 @@ class EMANet(SegBaseModel):
         if dilated:
             self.SF1 = AlignModule(channels[3], channels[0])
             self.donv_up3 = decoder_block(channels[0] + channels[3], channels[0])
+            # self.conv_up3 = conv_bn_relu(channels[0] + channels[3], channels[0])
 
             self.SF2 = AlignModule(channels[0], conv1_channel)
             self.donv_up4 = decoder_block(channels[0] + conv1_channel, channels[0])
+            # self.conv_up4 = conv_bn_relu(channels[0] + conv1_channel, channels[0])
 
             self.out_conv = out_conv(channels[0], n_class)
         else:
@@ -206,15 +208,23 @@ class EMANet(SegBaseModel):
             x = self.SF2((c1, x))
             x = self.donv_up4(x, c1)
         else:
-            x1 = self.donv_up1(c5, c4)
-            x2 = self.donv_up2(x1, c3)
-            x3 = self.donv_up3(x2, c2)
-            x = self.donv_up4(x3, c1)
+            c5 = self.SF1((c4, c5))
+            x = self.donv_up1(c5, c4)
+
+            x = self.SF2((c3, x))
+            x = self.donv_up2(x, c3)
+
+            x = self.SF3((c2, x))
+            x = self.donv_up3(x, c2)
+
+            x = self.SF4((c1, x))
+            x = self.donv_up4(x, c1)
 
         x, mu = self.emau(x)
-        x = self.out_conv(x)
 
+        x = self.out_conv(x)
         x = F.interpolate(x, size, mode='bilinear', align_corners=True)  # 最后上采样
+
         outputs.update({"main_out": x})
         outputs.update({"mu": mu})
 

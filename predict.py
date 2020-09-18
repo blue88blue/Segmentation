@@ -34,13 +34,13 @@ def pred(model, device, args, num_fold=0):
                 image = image.to(device, dtype=torch.float32)
                 outputs = model(image)
                 pred = outputs['main_out']
-                # pred = F.interpolate(outputs["main_out"], size=(256, 256), mode='bilinear', align_corners=True)
+                # pred = F.interpolate(pred, size=(256, 256), mode='bilinear', align_corners=True)
 
                 for i in range(image.shape[0]):
                     pred_i = pred[i, ...]
                     pred_mask = torch.max(torch.exp(pred_i.squeeze().cpu()), dim=0)[1]
                     pred_mask = pred_mask.squeeze().numpy()
-                    pred_mask = Image.fromarray(np.uint8(pred_mask)).convert('L')
+                    pred_mask = Image.fromarray(np.uint16(pred_mask+1)*100)
                     pred_mask.save(os.path.join(pred_dir[num_fold], file_name[i] + ".png"))
 
 

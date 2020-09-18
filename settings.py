@@ -4,8 +4,8 @@ import csv
 
 class basic_setting():
 
-    mode = "test"                             # train,  test,  train_test
-    k_fold = 5                              # None 不交叉验证 验证集即为训练集
+    mode = "train"                             # train,  test,  train_test
+    k_fold = None                              # None 不交叉验证 验证集即为训练集
     start_fold = 0
     end_fold = 1
 
@@ -14,7 +14,6 @@ class basic_setting():
     data_root = "/home/sjh/dataset/AI+/train/image"
     target_root = '/home/sjh/dataset/AI+/train/label'
     crop_size = (256, 256)
-    num_workers = 12
 
     # #################################### train file settings ####################################
     run_dir = "AI_256"                      # 数据集名称
@@ -23,12 +22,12 @@ class basic_setting():
     # #################################### model settings ####################################
     in_channel = 3
     n_class = 8
-    network = "CENet"  # 模型名， 或实验名称
-    note = "SF4-OHEM"  # 标签(区分不同训练设置)
+    network = "EMANet"  # 模型名， 或实验名称
+    note = "dilated-renet34-SP-SF"  # 标签(区分不同训练设置)
     Ulikenet_channel_reduction = 2  # 类Unet模型通道衰减数(默认通道减半)
     backbone = "resnet34"  # 继承自SegBaseModel的模型backbone
     pretrained = True
-    dilated = False
+    dilated = True
     deep_stem = False
     aux = False
 
@@ -36,7 +35,8 @@ class basic_setting():
     class_weight = [1.16789861, 2.01992865, 0.67693378, 0.74623627, 1.4585703,  0.80229305, 2.42390565, 0.67258576]
     OHEM = False
     num_epochs = 100
-    batch_size = 8
+    batch_size = 4
+    num_workers = 12
     aux_weight = 0.5
     dice_weight = 1
     lr = 1e-4
