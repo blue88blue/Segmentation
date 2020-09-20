@@ -70,23 +70,25 @@ class DenseNet(nn.Module):
         ]))
 
         # Each denseblock
+        self.num_features = []
         num_features = num_init_features
         for i, num_layers in enumerate(block_config):
             block = _DenseBlock(num_layers, num_features, bn_size, growth_rate, drop_rate, norm_layer=norm_layer)
             self.features.add_module('denseblock%d' % (i + 1), block)
             num_features = num_features + num_layers * growth_rate
+            self.num_features.append(num_features)
             if i != len(block_config) - 1:
                 trans = _Transition(num_features, num_features // 2, norm_layer=norm_layer)
                 self.features.add_module('transition%d' % (i + 1), trans)
                 num_features = num_features // 2
-        self.num_features = num_features
+                # self.num_features.append(num_features)
+
 
         # Final batch norm
         self.features.add_module('norm5', norm_layer(num_features))
 
         # Linear layer
         self.classifier = nn.Linear(num_features, num_classes)
-        self.num_features = num_features
 
         # Official init from torch repo.
         for m in self.modules():
@@ -104,6 +106,25 @@ class DenseNet(nn.Module):
         out = F.adaptive_avg_pool2d(out, (1, 1)).view(features.size(0), -1)
         out = self.classifier(out)
         return out
+
+    def extract_features(self, x):
+        x = self.features.conv0(x)
+        x = self.features.norm0(x)
+        c1 = self.features.relu0(x)
+
+        x = self.features.pool0(c1)
+        c2 = self.features.denseblock1(x)
+
+        x = self.features.transition1(c2)
+        c3 = self.features.denseblock2(x)
+
+        x = self.features.transition2(c3)
+        c4 = self.features.denseblock3(x)
+
+        x = self.features.transition3(c4)
+        x = self.features.denseblock4(x)
+        c5 = self.features.norm5(x)
+        return [c1, c2, c3, c4, c5]
 
 
 class DilatedDenseNet(DenseNet):
@@ -227,5 +248,11 @@ def dilated_densenet201(dilate_scale, **kwargs):
 
 if __name__ == '__main__':
     img = torch.randn(2, 3, 224, 224)
-    model = dilated_densenet121(8)
-    outputs = model(img)
+    model = dilated_densenet169(8)
+    outputs = model.features(img)
+    c1, c2, c3, c4, c5 = model.extract_features(img)
+    print(outputs.size())
+
+    print(model.num_features)
+    print(c1.size(), c2.size(), c3.size(), c4.size(), c5.size())
+

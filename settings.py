@@ -23,23 +23,23 @@ class basic_setting():
     in_channel = 3
     n_class = 8
     network = "EMANet"  # 模型名， 或实验名称
-    note = "dilated-renet34-SP-SF"  # 标签(区分不同训练设置)
+    note = "densenet121"  # 标签(区分不同训练设置)
     Ulikenet_channel_reduction = 2  # 类Unet模型通道衰减数(默认通道减半)
-    backbone = "resnet34"  # 继承自SegBaseModel的模型backbone
+    backbone = "densenet121"  # 继承自SegBaseModel的模型backbone
     pretrained = True
-    dilated = True
+    dilated = False
     deep_stem = False
     aux = False
 
     # #################################### train settings ####################################
     class_weight = [1.16789861, 2.01992865, 0.67693378, 0.74623627, 1.4585703,  0.80229305, 2.42390565, 0.67258576]
-    OHEM = False
+    OHEM = True
     num_epochs = 100
     batch_size = 4
-    num_workers = 12
+    num_workers = 8
     aux_weight = 0.5
     dice_weight = 1
-    lr = 1e-4
+    lr = 1e-3
     momentum = 0.9
     weight_decay = 1e-4
     # cuda_id = "0"

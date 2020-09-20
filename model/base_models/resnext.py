@@ -156,6 +156,16 @@ class ResNext(nn.Module):
 
         return x
 
+    def extract_features(self, x):
+        x = self.conv1(x)
+        x = self.bn1(x)
+        c1 = self.relu(x)  # 1/2  64
+        x = self.maxpool(c1)
+        c2 = self.layer1(x)  # 1/4   64
+        c3 = self.layer2(c2)  # 1/8   128
+        c4 = self.layer3(c3)  # 1/16   256
+        c5 = self.layer4(c4)  # 1/32   512
+        return [c1, c2, c3, c4, c5]
 
 def resnext18( **kwargs):
     """Constructs a ResNeXt-18 model.

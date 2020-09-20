@@ -2,6 +2,7 @@
 import torch.nn as nn
 
 from .base_models.resnetv1b import resnet50_v1b, resnet101_v1b, resnet152_v1b, resnet34_v1b
+from .base_models.densenet import *
 from .base_models.resnext import resnext34
 from .base_models.resnest import resnest50, resnest101
 
@@ -39,6 +40,24 @@ class SegBaseModel(nn.Module):
         elif backbone == 'resnest101':
             self.backbone = resnest101(pretrained=pretrained_base, dilated=dilated)
             self.base_channel = [256, 512, 1024, 2048]
+        elif backbone == "densenet121":
+            if dilated:
+                self.backbone = dilated_densenet121(8, pretrained=pretrained_base)
+            else:
+                self.backbone = densenet121(pretrained=pretrained_base)
+            self.base_channel = self.backbone.num_features
+        elif backbone == "densenet169":
+            if dilated:
+                self.backbone = dilated_densenet169(8, pretrained=pretrained_base)
+            else:
+                self.backbone = densenet169(pretrained=pretrained_base)
+            self.base_channel = self.backbone.num_features
+        elif backbone == "densenet201":
+            if dilated:
+                self.backbone = dilated_densenet201(8, pretrained=pretrained_base)
+            else:
+                self.backbone = densenet201(pretrained=pretrained_base)
+            self.base_channel = self.backbone.num_features
         else:
             raise RuntimeError('unknown backbone: {}'.format(backbone))
 

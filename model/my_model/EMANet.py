@@ -151,6 +151,7 @@ class EMANet(SegBaseModel):
         self.aux = aux
         self.dilated = dilated
         channels = self.base_channel  # [256, 512, 1024, 2048]
+        print(channels)
         if deep_stem or backbone == 'resnest101':
             conv1_channel = 128
         else:
@@ -162,24 +163,22 @@ class EMANet(SegBaseModel):
         if dilated:
             self.SF1 = AlignModule(channels[3], channels[0])
             self.donv_up3 = decoder_block(channels[0] + channels[3], channels[0])
-            # self.conv_up3 = conv_bn_relu(channels[0] + channels[3], channels[0])
 
             self.SF2 = AlignModule(channels[0], conv1_channel)
             self.donv_up4 = decoder_block(channels[0] + conv1_channel, channels[0])
-            # self.conv_up4 = conv_bn_relu(channels[0] + conv1_channel, channels[0])
 
             self.out_conv = out_conv(channels[0], n_class)
         else:
-            self.SF1 = AlignModule(channels[3], channels[2])
+            # self.SF1 = AlignModule(channels[3], channels[2])
             self.donv_up1 = decoder_block(channels[2] + channels[3], channels[2])
 
-            self.SF2 = AlignModule(channels[2], channels[1])
+            # self.SF2 = AlignModule(channels[2], channels[1])
             self.donv_up2 = decoder_block(channels[1] + channels[2], channels[1])
 
-            self.SF3 = AlignModule(channels[1], channels[0])
+            # self.SF3 = AlignModule(channels[1], channels[0])
             self.donv_up3 = decoder_block(channels[0] + channels[1], channels[0])
 
-            self.SF4 = AlignModule(channels[0], channels[0])
+            # self.SF4 = AlignModule(channels[0], channels[0])
             self.donv_up4 = decoder_block(channels[0] + conv1_channel, channels[0])
             self.out_conv = out_conv(channels[0], n_class)
 
@@ -191,33 +190,26 @@ class EMANet(SegBaseModel):
         outputs = dict()
         size = x.size()[2:]
 
-        x = self.backbone.conv1(x)
-        x = self.backbone.bn1(x)
-        c1 = self.backbone.relu(x)  # 1/2  64
-        x = self.backbone.maxpool(c1)
-        c2 = self.backbone.layer1(x)  # 1/4   64
-        c3 = self.backbone.layer2(c2)  # 1/8   128
-        c4 = self.backbone.layer3(c3)  # 1/16   256
-        c5 = self.backbone.layer4(c4)  # 1/32   512
+        c1, c2, c3, c4, c5 = self.backbone.extract_features(x)
 
         c5 = self.spsp(c5)
 
         if self.dilated:
-            c5 = self.SF1((c2, c5))
+            # c5 = self.SF1((c2, c5))
             x = self.donv_up3(c5, c2)
-            x = self.SF2((c1, x))
+            # x = self.SF2((c1, x))
             x = self.donv_up4(x, c1)
         else:
-            c5 = self.SF1((c4, c5))
+            # c5 = self.SF1((c4, c5))
             x = self.donv_up1(c5, c4)
 
-            x = self.SF2((c3, x))
+            # x = self.SF2((c3, x))
             x = self.donv_up2(x, c3)
 
-            x = self.SF3((c2, x))
+            # x = self.SF3((c2, x))
             x = self.donv_up3(x, c2)
 
-            x = self.SF4((c1, x))
+            # x = self.SF4((c1, x))
             x = self.donv_up4(x, c1)
 
         x, mu = self.emau(x)
