@@ -3,6 +3,7 @@ import torch.nn as nn
 
 from .base_models.resnetv1b import resnet50_v1b, resnet101_v1b, resnet152_v1b, resnet34_v1b
 from .base_models.densenet import *
+from .base_models.EfficientNet.model import EfficientNet
 from .base_models.resnext import resnext34
 from .base_models.resnest import resnest50, resnest101
 
@@ -58,6 +59,14 @@ class SegBaseModel(nn.Module):
             else:
                 self.backbone = densenet201(pretrained=pretrained_base)
             self.base_channel = self.backbone.num_features
+        elif "efficientnet" in backbone:
+            if pretrained_base:
+                self.backbone = EfficientNet.from_pretrained(backbone)
+            else:
+                self.backbone = EfficientNet.from_name(backbone)
+            # self.base_channel = [24, 48, 120, 352]  # b2 16
+            self.base_channel = [32, 56, 160, 448]  # b4  24
+            self.base_channel = [32, 48, 136, 384]  # b3 24
         else:
             raise RuntimeError('unknown backbone: {}'.format(backbone))
 

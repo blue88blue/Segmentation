@@ -1,4 +1,4 @@
-from dataset.dataset_seg import AI_PredictDataset
+from dataset.dataset_AI import predict_Dataset
 from dataset.transform import scale_adaptive
 from torch.utils.data import DataLoader
 import torch
@@ -21,7 +21,7 @@ model_CPepoch = 30
 
 
 def pred(model, device, args, num_fold=0):
-    dataset_pred = AI_PredictDataset(pred_data_root, args.crop_size)
+    dataset_pred = predict_Dataset(pred_data_root, args.crop_size)
     dataloader_pred = DataLoader(dataset_pred, batch_size=args.batch_size, shuffle=False,
                                  num_workers=args.num_workers,pin_memory=True, drop_last=True)
     model.eval()

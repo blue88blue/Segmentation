@@ -102,7 +102,7 @@ def scale_adaptive(crop_size, image, label=None):
     image_size = image.size()[-2:]
     ratio_h = float(crop_size[0] / image_size[0])
     ratio_w = float(crop_size[1] / image_size[1])
-    ratio = max(ratio_h, ratio_w)
+    ratio = min(ratio_h, ratio_w)
     size = (int(image_size[0]*ratio), int(image_size[1]*ratio))
 
     image = F.interpolate(image.unsqueeze(0), size=size, mode='bilinear', align_corners=True).squeeze(0)

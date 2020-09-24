@@ -250,9 +250,10 @@ class EfficientNet(nn.Module):
         features = []
         # Stem
         x = self._swish(self._bn0(self._conv_stem(inputs)))
-        features.append(x)
 
         # Blocks
+        min_w = 10000
+        idxs = []
         count = 0
         for idx, block in enumerate(self._blocks):
             count += 1
@@ -260,11 +261,20 @@ class EfficientNet(nn.Module):
             if drop_connect_rate:
                 drop_connect_rate *= float(idx) / len(self._blocks)  # scale drop connect_rate
             x = block(x, drop_connect_rate=drop_connect_rate)
-            features.append(x)
+
+            w = x.size()[-1]
+            if min_w > w:
+                min_w = w
+                features.append(x)
+            elif min_w == w:
+                features.pop()
+                features.append(x)
 
         # Head
-        x = self._swish(self._bn1(self._conv_head(x)))
-        features.append(x)
+        # x = self._swish(self._bn1(self._conv_head(x)))
+        # features.pop()
+        # features.append(x)
+
         return features
 
     def forward(self, inputs):

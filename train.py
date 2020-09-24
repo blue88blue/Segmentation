@@ -1,4 +1,4 @@
-from dataset.dataset_seg import AI_Dataset
+from dataset.dataset_PALM import myDataset
 from utils import utils
 from settings import basic_setting
 from torch.utils.data import DataLoader
@@ -25,8 +25,8 @@ def main(args, num_fold=0):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model.to(device)
 
-    # if args.mode == "train" and num_fold <= 1:
-    #     torchsummary.summary(model, (3, args.crop_size[0], args.crop_size[1]))  # #输出网络结构和参数量
+    if args.mode == "train" and num_fold <= 1:
+        torchsummary.summary(model, (3, args.crop_size[0], args.crop_size[1]))  # #输出网络结构和参数量
     print(f'   [network: {args.network}  device: {device}]')
 
     if args.mode == "train":
@@ -45,12 +45,12 @@ def main(args, num_fold=0):
 
 
 def train(model, device, args, num_fold=0):
-    dataset_train = AI_Dataset(args.data_root, args.target_root, args.crop_size,  "train",
+    dataset_train = myDataset(args.data_root, args.target_root, args.crop_size,  "train",
                                  k_fold=args.k_fold, imagefile_csv=args.dataset_file_list, num_fold=num_fold)
     dataloader_train = DataLoader(dataset_train, batch_size=args.batch_size, shuffle=True,
                                   num_workers=args.num_workers, pin_memory=True, drop_last=True)
     num_train_data = len(dataset_train)  # 训练数据大小
-    dataset_val = AI_Dataset(args.data_root, args.target_root, args.crop_size, "val",
+    dataset_val = myDataset(args.data_root, args.target_root, args.crop_size, "val",
                                k_fold=args.k_fold, imagefile_csv=args.dataset_file_list, num_fold=num_fold)
     dataloader_val = DataLoader(dataset_val, batch_size=args.batch_size, shuffle=False,
                                 num_workers=args.num_workers, pin_memory=True, drop_last=True)
@@ -195,7 +195,7 @@ def test(model, device, args, num_fold=0):
     model.load_state_dict(torch.load(model_dir, map_location=device))
     print(f'\rtest model loaded: [fold:{num_fold}] [best_epoch:{best_epoch}]')
 
-    dataset_test = AI_Dataset(args.data_root, args.target_root, args.crop_size, "test",
+    dataset_test = myDataset(args.data_root, args.target_root, args.crop_size, "test",
                                 k_fold=args.k_fold, imagefile_csv=args.dataset_file_list, num_fold=num_fold)
     dataloader = DataLoader(dataset_test, batch_size=args.batch_size, shuffle=False, num_workers=args.num_workers, pin_memory=True)
 
@@ -298,7 +298,6 @@ if __name__ == "__main__":
             print("###################### Train Start ######################")
             for i in range(args.start_fold, args.end_fold):
                 torch.cuda.empty_cache()
-                time.sleep(10)
                 main(args, num_fold=i + 1)
 
         if mode == "test" or mode == "train_test":

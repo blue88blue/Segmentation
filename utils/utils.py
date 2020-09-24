@@ -47,7 +47,7 @@ def cal_scores(hist, smooth=1):
 
     Specificity = (TN+smooth) / (FP+TN+smooth)
 
-    return dice*100, iou*100, Precision*100, Sensitivity*100, Specificity*100
+    return dice[1:]*100, iou[1:]*100, Precision*100, Sensitivity[1:]*100, Specificity[1:]*100
 
 
 
@@ -101,16 +101,6 @@ def best_model_in_fold(val_result, num_fold):
     return best_epoch
 
 
-
-def make_class_label(mask):
-    b, h, w = mask.size()
-    mask = mask.view(b, -1)
-    class_label = torch.max(mask, dim=-1)[0]
-    return class_label
-
-
-
-
 # 读取数据集目录内文件名，保存至csv文件
 def get_dataset_filelist(data_root, save_file):
     file_list = os.listdir(data_root)
@@ -157,19 +147,22 @@ def poly_learning_rate(args, optimizer, epoch):
 
 
 
+# one hot转成0,1,2,..这样的标签
+def make_class_label(mask):
+    b = mask.size()[0]
+    mask = mask.view(b, -1)
+    class_label = torch.max(mask, dim=-1)[0]
+    return class_label
+
+
 # 把0,1,2...这样的类别标签转化为one_hot
 def make_one_hot(targets, num_classes):
-    # 二维图像展平
-    targets = targets.contiguous().view(targets.size()[0], 1,-1)
-    for j in range(num_classes):
-        target_j = torch.where(targets == j, torch.ones_like(targets), torch.zeros_like(targets))
-        if j == 0:
-            result = target_j
-        else:
-            result = torch.cat((result, target_j), dim=1)
-
-    return result
-
+    targets = targets.unsqueeze(1)
+    label = []
+    for i in range(num_classes):
+        label.append((targets == i).float())
+    label = torch.cat(label, dim=1)
+    return label
 
 
 

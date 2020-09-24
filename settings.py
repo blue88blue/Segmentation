@@ -4,49 +4,49 @@ import csv
 
 class basic_setting():
 
-    mode = "train"                             # train,  test,  train_test
-    k_fold = None                              # None 不交叉验证 验证集即为训练集
+    mode = "train_test"                             # train,  test,  train_test
+    k_fold = 4                              # None 不交叉验证 验证集即为训练集
     start_fold = 0
-    end_fold = 1
+    end_fold = k_fold
 
     # #################################### train Data settings ####################################
-    dataset_file_list = "utils/train_dataset_list.csv"  # 交叉验证所需文件名列表
-    data_root = "/home/sjh/dataset/AI+/train/image"
-    target_root = '/home/sjh/dataset/AI+/train/label'
-    crop_size = (256, 256)
+    dataset_file_list = "utils/PALM_dataset_list.csv"  # 交叉验证所需文件名列表
+    data_root = '/home/sjh/dataset/PLAM/PALM-Training400/PALM-Training400'
+    target_root = "/home/sjh/dataset/PLAM/PALM-Training400/PALM-Training400-Annotation-Lession/Lesion_Masks/Atrophy1"  # 萎缩标签
+    crop_size = (448, 448)
 
     # #################################### train file settings ####################################
-    run_dir = "AI_256"                      # 数据集名称
-    val_step = 3                          # 每训练几个epoch进行一次验证
+    run_dir = "PALM"                      # 数据集名称
+    val_step = 4                          # 每训练几个epoch进行一次验证
 
     # #################################### model settings ####################################
     in_channel = 3
-    n_class = 8
+    n_class = 2
     network = "EMANet"  # 模型名， 或实验名称
-    note = "densenet121"  # 标签(区分不同训练设置)
+    note = "justEMA"  # 标签(区分不同训练设置)
     Ulikenet_channel_reduction = 2  # 类Unet模型通道衰减数(默认通道减半)
-    backbone = "densenet121"  # 继承自SegBaseModel的模型backbone
+    backbone = "resnet34"  # 继承自SegBaseModel的模型backbone
     pretrained = True
     dilated = False
     deep_stem = False
     aux = False
 
     # #################################### train settings ####################################
-    class_weight = [1.16789861, 2.01992865, 0.67693378, 0.74623627, 1.4585703,  0.80229305, 2.42390565, 0.67258576]
-    OHEM = True
-    num_epochs = 100
-    batch_size = 4
+    class_weight = [0.5, 0.5]
+    OHEM = False
+    num_epochs = 400
+    batch_size = 2
     num_workers = 8
     aux_weight = 0.5
-    dice_weight = 1
+    dice_weight = 0.5
     lr = 1e-3
     momentum = 0.9
     weight_decay = 1e-4
     # cuda_id = "0"
 
     # #################################### test settings ####################################
-    test_run_file = "2020-0916-2213_22_CENet_SF4-OHEM_fold_5"
-    label_names = ['water', 'traffic', 'building', 'farmland', 'grassland', 'forest', 'earth', 'other']
+    test_run_file = "2020-0924-1716_53_Unet__fold_4"
+    label_names = ["bg", "atrophy"]
     plot = True  # 保存测试预测图片
 
 

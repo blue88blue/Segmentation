@@ -157,7 +157,7 @@ class EMANet(SegBaseModel):
         else:
             conv1_channel = 64
 
-        self.spsp = SPSP(channels[3], scales=[6, 3, 2, 1])   # scales=[6, 3, 2, 1]
+        # self.spsp = SPSP(channels[3], scales=[6, 3, 2, 1])   # scales=[6, 3, 2, 1]
         self.emau = EMAU(channels[0], k=32)
 
         if dilated:
@@ -192,7 +192,7 @@ class EMANet(SegBaseModel):
 
         c1, c2, c3, c4, c5 = self.backbone.extract_features(x)
 
-        c5 = self.spsp(c5)
+        # c5 = self.spsp(c5)
 
         if self.dilated:
             # c5 = self.SF1((c2, c5))
