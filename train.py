@@ -25,8 +25,8 @@ def main(args, num_fold=0):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model.to(device)
 
-    if args.mode == "train" and num_fold <= 1:
-        torchsummary.summary(model, (3, args.crop_size[0], args.crop_size[1]))  # #输出网络结构和参数量
+    # if args.mode == "train" and num_fold <= 1:
+    #     torchsummary.summary(model, (3, args.crop_size[0], args.crop_size[1]))  # #输出网络结构和参数量
     print(f'   [network: {args.network}  device: {device}]')
 
     if args.mode == "train":

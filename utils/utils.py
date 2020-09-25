@@ -1,6 +1,5 @@
 
 import torch
-from .loss import BinaryDiceLoss
 import torch.nn as nn
 import numpy as np
 import torch
@@ -108,31 +107,6 @@ def get_dataset_filelist(data_root, save_file):
     with open(save_file, 'w') as f:
         w = csv.writer(f)
         w.writerow(file_list)
-
-
-
-class DiceCoeff(nn.Module):
-
-    def __init__(self, **kwargs):
-        super().__init__()
-        self.kwargs = kwargs
-
-    def forward(self, predict, target):
-        total_loss = torch.zeros(predict.size()[1])  # 存放各个类的dice
-
-        target = make_one_hot(target, predict.size()[1])  # 转换成onehot
-
-        dice = BinaryDiceLoss(**self.kwargs)
-        predict = F.softmax(predict, dim=1)
-        # 二维图像展平
-        predict = predict.contiguous().view(predict.size()[0], predict.size()[1], -1)
-
-        for i in range(0, target.shape[1]):
-            # 计算每个类别的dice
-            total_loss[i] = dice(predict[:, i, :], target[:, i, :])
-
-        return total_loss
-
 
 
 def poly_learning_rate(args, optimizer, epoch):
