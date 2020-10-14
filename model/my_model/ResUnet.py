@@ -2,6 +2,7 @@ from model.segbase import SegBaseModel
 from model.model_utils import init_weights, _FCNHead
 from .blocks import *
 from .SPUnet import SPSP
+from .ccr import ccr
 
 
 class ResUnet(SegBaseModel):
@@ -16,7 +17,8 @@ class ResUnet(SegBaseModel):
         else:
             conv1_channel = 64
 
-        self.spsp = SPSP(channels[3], scales=[10, 6, 3, 1])
+        # self.spsp = SPSP(channels[3], scales=[10, 6, 3, 1])
+        self.ccr = ccr(channels[3], 64, n_class)
 
         if dilated:
             self.donv_up3 = decoder_block(channels[0]+channels[3], channels[0])
@@ -49,7 +51,8 @@ class ResUnet(SegBaseModel):
         c4 = self.backbone.layer3(c3)  # 1/16   256
         c5 = self.backbone.layer4(c4)  # 1/32   512
 
-        c5 = self.spsp(c5)
+        # c5 = self.spsp(c5)
+        c5 = self.ccr(c5)
 
         if self.dilated:
             x = self.donv_up3(c5, c2)

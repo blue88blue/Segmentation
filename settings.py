@@ -16,14 +16,14 @@ class basic_setting():
     crop_size = (448, 448)
 
     # #################################### train file settings ####################################
-    run_dir = "PALM"                      # 数据集名称
-    val_step = 4                          # 每训练几个epoch进行一次验证
+    run_dir = "/media/sjh/disk1T/PALM"                      # 数据集名称
+    val_step = 2                          # 每训练几个epoch进行一次验证
 
     # #################################### model settings ####################################
     in_channel = 3
     n_class = 2
-    network = "EMANet"  # 模型名， 或实验名称
-    note = "justEMA"  # 标签(区分不同训练设置)
+    network = "EfficientFCN"  # 模型名， 或实验名称
+    note = ""  # 标签(区分不同训练设置)
     Ulikenet_channel_reduction = 2  # 类Unet模型通道衰减数(默认通道减半)
     backbone = "resnet34"  # 继承自SegBaseModel的模型backbone
     pretrained = True
@@ -34,18 +34,18 @@ class basic_setting():
     # #################################### train settings ####################################
     class_weight = [0.5, 0.5]
     OHEM = False
-    num_epochs = 400
-    batch_size = 2
+    num_epochs = 250
+    batch_size = 4
     num_workers = 8
     aux_weight = 0.5
     dice_weight = 0.5
-    lr = 1e-3
+    lr = 1e-4
     momentum = 0.9
     weight_decay = 1e-4
     # cuda_id = "0"
 
     # #################################### test settings ####################################
-    test_run_file = "2020-0924-1716_53_Unet__fold_4"
+    test_run_file = "2020-1012-2205_29_EMANet_midEMA+SF-NOc1_fold_4"
     label_names = ["bg", "atrophy"]
     plot = True  # 保存测试预测图片
 
@@ -53,7 +53,7 @@ class basic_setting():
     def __init__(self):
         if not os.path.exists("./runs"):
             os.mkdir("./runs")
-        self.run_dir = "./runs/"+self.run_dir
+        # self.run_dir = "./runs/"+self.run_dir
         if not os.path.exists(self.run_dir):
             os.mkdir(self.run_dir)
 

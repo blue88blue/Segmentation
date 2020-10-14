@@ -11,6 +11,8 @@ from ..PSPNet import _PyramidPooling
 from ..DeepLabV3 import _ASPP
 from .SPUnet import SPSP
 from .RecoNet import Reco_module
+from torchvision.utils import save_image
+import time
 
 class EMAU(nn.Module):
     '''The Expectation-Maximization Attention Unit (EMAU).
@@ -76,7 +78,12 @@ class EMAU(nn.Module):
         x = x + idn
         x = F.relu(x, inplace=True)
 
+        time_now = time.strftime("%Y-%m%d-%H%M_%S", time.localtime(time.time()))
+        map = F.interpolate(z_t.view(b, -1, h, w), size=(224, 224))
+        save_image(map[0, 0, :, :], time_now+".png")
+        save_image(map[0, 1, :, :], time_now + ".jpg")
         return x, mu
+
 
     def _l2norm(self, inp, dim):
         '''Normlize the inp tensor with l2-norm.
@@ -127,7 +134,7 @@ class out_conv(nn.Module):
             nn.Conv2d(in_channel, in_channel, kernel_size=3, padding=1, bias=False),
             nn.BatchNorm2d(in_channel),
             nn.ReLU(),
-            nn.Conv2d(in_channel, n_class, kernel_size=1, bias=False),
+            nn.Conv2d(in_channel, n_class, kernel_size=1),
         )
 
         for m in self.modules():
@@ -158,7 +165,7 @@ class EMANet(SegBaseModel):
             conv1_channel = 64
 
         # self.spsp = SPSP(channels[3], scales=[6, 3, 2, 1])   # scales=[6, 3, 2, 1]
-        self.emau = EMAU(channels[0], k=32)
+        self.emau = EMAU(channels[3], k=32)
 
         if dilated:
             self.SF1 = AlignModule(channels[3], channels[0])
@@ -169,17 +176,17 @@ class EMANet(SegBaseModel):
 
             self.out_conv = out_conv(channels[0], n_class)
         else:
-            # self.SF1 = AlignModule(channels[3], channels[2])
+            self.SF1 = AlignModule(channels[3], channels[2])
             self.donv_up1 = decoder_block(channels[2] + channels[3], channels[2])
 
-            # self.SF2 = AlignModule(channels[2], channels[1])
+            self.SF2 = AlignModule(channels[2], channels[1])
             self.donv_up2 = decoder_block(channels[1] + channels[2], channels[1])
 
-            # self.SF3 = AlignModule(channels[1], channels[0])
+            self.SF3 = AlignModule(channels[1], channels[0])
             self.donv_up3 = decoder_block(channels[0] + channels[1], channels[0])
 
             # self.SF4 = AlignModule(channels[0], channels[0])
-            self.donv_up4 = decoder_block(channels[0] + conv1_channel, channels[0])
+            # self.donv_up4 = decoder_block(channels[0] + conv1_channel, channels[0])
             self.out_conv = out_conv(channels[0], n_class)
 
         if self.aux:
@@ -193,26 +200,27 @@ class EMANet(SegBaseModel):
         c1, c2, c3, c4, c5 = self.backbone.extract_features(x)
 
         # c5 = self.spsp(c5)
+        c5, mu = self.emau(c5)
 
         if self.dilated:
-            # c5 = self.SF1((c2, c5))
+            c5 = self.SF1((c2, c5))
             x = self.donv_up3(c5, c2)
-            # x = self.SF2((c1, x))
+            x = self.SF2((c1, x))
             x = self.donv_up4(x, c1)
         else:
-            # c5 = self.SF1((c4, c5))
+            c5 = self.SF1((c4, c5))
             x = self.donv_up1(c5, c4)
 
-            # x = self.SF2((c3, x))
+            x = self.SF2((c3, x))
             x = self.donv_up2(x, c3)
 
-            # x = self.SF3((c2, x))
+            x = self.SF3((c2, x))
             x = self.donv_up3(x, c2)
 
             # x = self.SF4((c1, x))
-            x = self.donv_up4(x, c1)
+            # x = self.donv_up4(x, c1)
 
-        x, mu = self.emau(x)
+        # x, mu = self.emau(x)
 
         x = self.out_conv(x)
         x = F.interpolate(x, size, mode='bilinear', align_corners=True)  # 最后上采样

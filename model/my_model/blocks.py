@@ -648,7 +648,7 @@ class AlignModule(nn.Module):
         grid = grid.repeat(n, 1, 1, 1).type_as(input).to(input.device)
         grid = grid + flow.permute(0, 2, 3, 1) / norm
 
-        output = F.grid_sample(input, grid)
+        output = F.grid_sample(input, grid, align_corners=True)
         return output
 
 

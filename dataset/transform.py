@@ -17,7 +17,7 @@ def random_Rotate(img, label=None):
 # 随机对比度
 def random_Contrast(img):
     v = float(torch.rand(1)) * 2
-    if 0.8 <= v <= 1.2:
+    if 0.5 <= v <= 1.5:
         return PIL.ImageEnhance.Contrast(img).enhance(v)
     else:
         return img
@@ -25,7 +25,7 @@ def random_Contrast(img):
 # 随机颜色鲜艳或灰暗
 def random_Color(img):
     v = float(torch.rand(1)) * 2
-    if 0.8 <= v <= 1.2:
+    if 0.4 <= v <= 1.5:
         return PIL.ImageEnhance.Color(img).enhance(v)
     else:
         return img
@@ -33,7 +33,7 @@ def random_Color(img):
 # 随机亮度变换
 def random_Brightness(img):  # [0.1,1.9]
     v = float(torch.rand(1)) * 2
-    if 0.8 <= v <= 1.2:
+    if 0.4 <= v <= 1.5:
         return PIL.ImageEnhance.Brightness(img).enhance(v)
     else:
         return img
@@ -49,8 +49,8 @@ def random_GaussianBlur(img):
 
 # 随机变换
 def random_transfrom(image, label=None):
-    image = random_Color(image)
-    # image, label = random_Rotate(image, label)
+    # image = random_Color(image)
+    image, label = random_Rotate(image, label)
     image = random_Contrast(image)
     image = random_Brightness(image)
     # image = random_GaussianBlur(image)

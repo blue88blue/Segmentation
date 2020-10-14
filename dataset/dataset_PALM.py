@@ -22,6 +22,7 @@ class myDataset(Dataset):
             fold = num_fold - 1
             if data_mode == "train":
                 self.image_files = image_files[0: fold*fold_size] + image_files[fold*fold_size+fold_size:]
+                self.image_files = self.image_files * 2   # ################ *2
             elif data_mode == "val" or data_mode == "test":
                 self.image_files = image_files[fold*fold_size: fold*fold_size+fold_size]
             else:
