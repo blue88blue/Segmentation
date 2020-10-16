@@ -1,7 +1,7 @@
 from dataset.dataset_PALM import myDataset
 from torchvision.utils import save_image
 import torch
-from settings import basic_setting
+from settings_PALM import basic_setting
 import matplotlib.pyplot as plt
 from model.base_models.EfficientNet.model import EfficientNet
 

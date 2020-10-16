@@ -1,6 +1,6 @@
-from dataset.dataset_PALM import myDataset
+from settings_PALM import *
+
 from utils import utils
-from settings import basic_setting
 from torch.utils.data import DataLoader
 import torch
 import torch.nn as nn
@@ -17,6 +17,7 @@ import torchsummary
 from torchvision.utils import save_image
 # models
 from model.choose_model import seg_model
+
 
 
 def main(args, num_fold=0):
@@ -107,6 +108,19 @@ def train(model, device, args, num_fold=0):
                         momentum = 0.9
                         model.emau.mu *= momentum
                         model.emau.mu += mu * (1 - momentum)
+                if "mu1" in outputs.keys():
+                    with torch.no_grad():
+                        mu1 = outputs['mu1'].mean(dim=0, keepdim=True)
+                        model.donv_up1.em.mu = model.donv_up1.em.mu * 0.9 + mu1 * (1 - 0.9)
+
+                        mu2 = outputs['mu2'].mean(dim=0, keepdim=True)
+                        model.donv_up2.em.mu = model.donv_up2.em.mu * 0.9 + mu2 * (1 - 0.9)
+
+                        mu3 = outputs['mu3'].mean(dim=0, keepdim=True)
+                        model.donv_up3.em.mu = model.donv_up3.em.mu * 0.9 + mu3 * (1 - 0.9)
+
+                        mu4 = outputs['mu4'].mean(dim=0, keepdim=True)
+                        model.donv_up4.em.mu = model.donv_up4.em.mu * 0.9 + mu4 * (1 - 0.9)
                 totall_loss.backward()
                 opt.step()
 

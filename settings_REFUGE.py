@@ -1,28 +1,29 @@
 import os
 import time
 import csv
+from dataset.dataset_REFUGE import myDataset
 
 class basic_setting():
 
     mode = "train_test"                             # train,  test,  train_test
-    k_fold = 4                              # None 不交叉验证 验证集即为训练集
+    k_fold = 3                              # None 不交叉验证 验证集即为训练集
     start_fold = 0
-    end_fold = k_fold
+    end_fold = 1
 
     # #################################### train Data settings ####################################
-    dataset_file_list = "utils/PALM_dataset_list.csv"  # 交叉验证所需文件名列表
-    data_root = '/home/sjh/dataset/PLAM/PALM-Training400/PALM-Training400'
-    target_root = "/home/sjh/dataset/PLAM/PALM-Training400/PALM-Training400-Annotation-Lession/Lesion_Masks/Atrophy1"  # 萎缩标签
-    crop_size = (448, 448)
+    dataset_file_list = "utils/REFUGE_dataset_list.csv"  # 交叉验证所需文件名列表
+    data_root = '/home/sjh/dataset/REFUGE2_ROI_512/MICCAI2018/1200_image'
+    target_root = "/home/sjh/dataset/REFUGE2_ROI_512/MICCAI2018/1200_masks"  # 萎缩标签
+    crop_size = (320, 320)
 
     # #################################### train file settings ####################################
-    run_dir = "/media/sjh/disk1T/PALM"                      # 数据集名称
+    run_dir = "/media/sjh/disk1T/REFUGE"                      # 数据集名称
     val_step = 2                          # 每训练几个epoch进行一次验证
 
     # #################################### model settings ####################################
     in_channel = 3
-    n_class = 2
-    network = "EfficientFCN"  # 模型名， 或实验名称
+    n_class = 3
+    network = "ResUnet"  # 模型名， 或实验名称
     note = ""  # 标签(区分不同训练设置)
     Ulikenet_channel_reduction = 2  # 类Unet模型通道衰减数(默认通道减半)
     backbone = "resnet34"  # 继承自SegBaseModel的模型backbone
@@ -32,9 +33,9 @@ class basic_setting():
     aux = False
 
     # #################################### train settings ####################################
-    class_weight = [0.5, 0.5]
+    class_weight = [0.5, 0.5, 0.5]
     OHEM = False
-    num_epochs = 250
+    num_epochs = 100
     batch_size = 4
     num_workers = 8
     aux_weight = 0.5
@@ -46,7 +47,7 @@ class basic_setting():
 
     # #################################### test settings ####################################
     test_run_file = "2020-1012-2205_29_EMANet_midEMA+SF-NOc1_fold_4"
-    label_names = ["bg", "atrophy"]
+    label_names = ["bg", "disc", "cup"]
     plot = True  # 保存测试预测图片
 
 
@@ -107,11 +108,11 @@ class basic_setting():
             self.test_result_file = os.path.join(self.dir, "test_result.csv")
             with open(self.test_result_file, "w") as f:
                 w = csv.writer(f)
-                title = ['file', 'mDice'] + [name+"_dice" for name in self.label_names] + \
-                        ['mIoU'] + [name + "_iou" for name in self.label_names] + \
+                title = ['file', 'mDice'] + [name+"_dice" for name in self.label_names[1:]] + \
+                        ['mIoU'] + [name + "_iou" for name in self.label_names[1:]] + \
                         ['mAcc'] + \
-                        ['mSens'] + [name + "_sens" for name in self.label_names] + \
-                        ['mSpec'] + [name + "_spec" for name in self.label_names]
+                        ['mSens'] + [name + "_sens" for name in self.label_names[1:]] + \
+                        ['mSpec'] + [name + "_spec" for name in self.label_names[1:]]
                 w.writerow(title)
             # 测试结果图片保存
             if self.plot:

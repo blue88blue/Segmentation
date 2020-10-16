@@ -40,8 +40,8 @@ class EfficientFCN_Module(nn.Module):
         code_word = torch.bmm(B_, A)  # (b, 1024, n)
 
         # Codeword assembly for high-resolution feature upsampling.
-        G = self.conv_G(m8) + self.pool(B)  # (b, 1024, h/8, w/8)
-        W = self.conv_W(G)  # (b, n, h/8, w/8)
+        G = self.conv_G(m8)  # (b, 1024, h/8, w/8)
+        W = self.conv_W(G + self.pool(B))  # (b, n, h/8, w/8)
         b, c, h, w = W.size()
         W = W.view(b, c, -1)  # (b, n, h/8*w/8)
         f = torch.bmm(code_word, W).view(b, -1, h, w)

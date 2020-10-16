@@ -17,9 +17,6 @@ class ResUnet(SegBaseModel):
         else:
             conv1_channel = 64
 
-        # self.spsp = SPSP(channels[3], scales=[10, 6, 3, 1])
-        self.ccr = ccr(channels[3], 64, n_class)
-
         if dilated:
             self.donv_up3 = decoder_block(channels[0]+channels[3], channels[0])
             self.donv_up4 = decoder_block(channels[0]+conv1_channel, channels[0])
@@ -32,12 +29,8 @@ class ResUnet(SegBaseModel):
         if self.aux:
             self.aux_layer = _FCNHead(256, n_class)
 
-        self.out_conv = nn.Sequential(
-            nn.Conv2d(channels[0], channels[0], kernel_size=3, padding=1, bias=False),
-            nn.BatchNorm2d(channels[0]),
-            nn.ReLU(),
-            nn.Conv2d(channels[0], n_class, kernel_size=1, bias=False),
-        )
+        self.out_conv = nn.Conv2d(channels[0], n_class, kernel_size=1)
+
 
     def forward(self, x):
         outputs = dict()
@@ -50,9 +43,6 @@ class ResUnet(SegBaseModel):
         c3 = self.backbone.layer2(c2)  # 1/8   128
         c4 = self.backbone.layer3(c3)  # 1/16   256
         c5 = self.backbone.layer4(c4)  # 1/32   512
-
-        # c5 = self.spsp(c5)
-        c5 = self.ccr(c5)
 
         if self.dilated:
             x = self.donv_up3(c5, c2)

@@ -5,7 +5,7 @@ import torch
 import os
 from PIL import Image
 from torch.nn import functional as F
-from settings import basic_setting
+from settings_PALM import basic_setting
 import numpy as np
 import csv
 from tqdm import tqdm

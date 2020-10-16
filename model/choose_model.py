@@ -10,6 +10,7 @@ from model.cenet import CE_Net_
 from model.my_model.EMANet import EMANet
 from model.deeplabv3_plus import DeepLabV3Plus
 from model.my_model.EfficientFCN import EfficientFCN
+from model.my_model.ccr import EMUPNet
 
 
 def seg_model(args):
@@ -37,6 +38,8 @@ def seg_model(args):
         model = DeepLabV3Plus(args.n_class)
     elif args.network == "EfficientFCN":
         model = EfficientFCN(args.n_class, args.backbone, aux=args.aux, pretrained_base=args.pretrained, dilated=False, deep_stem=args.deep_stem)
+    elif args.network == "EMUPNet":
+        model = EMUPNet(args.n_class, args.backbone, pretrained_base=args.pretrained,  deep_stem=args.deep_stem)
     else:
         NotImplementedError("not implemented {args.network} model")
 
