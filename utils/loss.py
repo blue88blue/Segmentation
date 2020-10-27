@@ -115,6 +115,52 @@ class OhemCrossEntropy(nn.Module):
 
 
 
+# 为每张图像采样
+class OhemCrossEntropy_per_image(nn.Module):
+    def __init__(self, ignore_label=-1, thres=0.8,
+                 min_kept=100000, weight=None):
+        super(OhemCrossEntropy_per_image, self).__init__()
+        self.thresh = thres
+        self.min_kept = max(1, min_kept)
+        self.ignore_label = ignore_label
+        self.criterion = nn.CrossEntropyLoss(weight=weight,
+                                             ignore_index=ignore_label,
+                                             reduction='none')
+
+    def forward(self, score, target, **kwargs):
+        batch, c, ph, pw = score.size()
+        h, w = target.size(1), target.size(2)
+        if ph != h or pw != w:
+            score = F.upsample(input=score, size=(h, w), mode='bilinear')
+        pred = F.softmax(score, dim=1)
+        pixel_losses = self.criterion(score, target).contiguous().view(batch, -1)
+        mask = target.contiguous().view(batch, -1) != self.ignore_label
+
+        tmp_target = target.clone()
+        tmp_target[tmp_target == self.ignore_label] = 0  # 将忽略的标签数字置零
+        pred = pred.gather(1, tmp_target.unsqueeze(1))  # 取出对应标签的交叉熵
+
+        losses = 0
+        for i in range(batch):
+            pred_i = pred[i, :, :, :]
+            mask_i = mask[i, :]
+            pixel_losses_i = pixel_losses[i, :]
+
+            pred_i, ind = pred_i.contiguous().view(-1, )[mask_i].contiguous().sort()  # 将每个像素对应标签的置信度排序，从小到大
+            min_value = pred_i[min(self.min_kept, pred_i.numel() - 1)]  # 最小的预测值
+            threshold = max(min_value, self.thresh)  # 阈值
+
+            loss = pixel_losses_i[mask_i][ind]  # 经过排序的像素损失
+            losses += loss[pred_i < threshold].mean()  # 小于阈值的像素的损失
+
+        return losses/batch
+
+
+
+
+
+
+
 class AMSoftMaxLoss2D(nn.Module):
     def __init__(self, inchannel, n_class, m=0.35, s=30, device=torch.device("cpu")):
         super().__init__()

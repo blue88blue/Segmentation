@@ -6,6 +6,10 @@ from torch.utils.data import WeightedRandomSampler
 import numpy as np
 from model.segbase import SegBaseModel
 from model.model_utils import init_weights, _FCNHead
+from model.my_model.blocks import *
+from model.my_model.SPUnet import SPSP
+
+
 
 def softmax_T(x, dim, T=1):
     x = torch.exp(x)
@@ -124,7 +128,6 @@ class EMA_UP_docoder(nn.Module):
                         nn.Conv2d(self.channel, self.channel, 1, bias=False),
                         nn.BatchNorm2d(self.channel),
                         nn.ReLU())
-        # self.conv_out = nn.Conv2d(self.channel*2, channel_l, kernel_size=1)
         self.conv_out = nn.Sequential(
                         nn.Conv2d(self.channel*2, channel_l, kernel_size=1, bias=False),
                         nn.BatchNorm2d(channel_l),
@@ -140,14 +143,14 @@ class EMA_UP_docoder(nn.Module):
         m_low = torch.cat((x_l, x_h_up), dim=1)
 
         # Holistic codebook generation.
-        base = self.em(m_deep)
+        em_out = self.em(m_deep)
+        base = em_out["mu"]
 
         # Codeword assembly for high-resolution feature upsampling.
         m_low = self.conv_trans_low(m_low)  # (b, 1024, h/8, w/8)
         W = self.conv_trans_attention(m_low + self.pool(self.conv_gobal(m_deep)))  # (b, 1024, h/8, w/8)
         b, c, h, w = W.size()
         W = W.view(b, c, -1).permute(0, 2, 1)  # (b, h/8*w/8, 1024)
-        # similarity = F.softmax(torch.bmm(W, base).permute(0, 2, 1), dim=-1)  # (b, k, hw)
         similarity = F.softmax(torch.bmm(W, base).permute(0, 2, 1), dim=1)  # (b, k, hw)
         m_up = torch.bmm(base, similarity).view(b, c, h, w)  #(b, c, hw)
         m_up = self.rebuild_conv(m_up)
@@ -155,7 +158,66 @@ class EMA_UP_docoder(nn.Module):
         f = torch.cat((m_up, m_low), dim=1)
         out = self.conv_out(f)
 
-        return out, base
+        return {"out": out,
+                "base": base,
+                "A": similarity.view(b, -1, h, w)}
+
+
+
+# class EMA_UP_docoder(nn.Module):
+#     def __init__(self, channel_h, channel_l, k=64):
+#         super().__init__()
+#         self.channel = channel_h + channel_l
+#
+#         self.conv_in_h = conv_bn_relu(channel_h, channel_h, kernel_size=1, padding=0)
+#         self.conv_in_l = conv_bn_relu(channel_l, channel_l, kernel_size=1, padding=0)
+#
+#         self.em = EM(self.channel, k=k)
+#
+#         self.conv_trans_low = nn.Conv2d(self.channel, self.channel, kernel_size=1, padding=0)
+#
+#         self.pool = nn.AdaptiveAvgPool2d(1)
+#         self.conv_trans_attention = nn.Conv2d(self.channel, self.channel, kernel_size=1)
+#
+#         self.rebuild_conv = nn.Sequential(
+#                         nn.Conv2d(self.channel, self.channel, 1, bias=False),
+#                         nn.BatchNorm2d(self.channel),
+#                         nn.ReLU())
+#
+#         self.conv_out = nn.Sequential(
+#                         nn.Conv2d(self.channel*2, channel_l, kernel_size=1, bias=False),
+#                         nn.BatchNorm2d(channel_l),
+#                         nn.ReLU())
+#
+#     def forward(self, x_h, x_l):
+#         # Multi-scale features fusion.
+#         x_h = self.conv_in_h(x_h)
+#         x_l = self.conv_in_l(x_l)
+#         x_h_up = F.interpolate(x_h, size=x_l.size()[-2:], mode="bilinear", align_corners=True)
+#         x_l_down = F.interpolate(x_l, size=x_h.size()[-2:], mode="bilinear", align_corners=True)
+#         m_deep = torch.cat((x_l_down, x_h), dim=1)
+#         m_low = torch.cat((x_l, x_h_up), dim=1)
+#
+#         # Holistic codebook generation.
+#         em_out = self.em(m_deep)
+#         base = em_out["mu"]
+#         x = em_out["x_trans"]
+#
+#         # Codeword assembly for high-resolution feature upsampling.
+#         m_low = self.conv_trans_low(m_low)  # (b, 1024, h/8, w/8)
+#         W = self.conv_trans_attention(m_low + self.pool(x))   # (b, 1024, h/8, w/8)
+#         b, c, h, w = W.size()
+#         W = W.view(b, c, -1).permute(0, 2, 1)  # (b, h/8*w/8, 1024)
+#         similarity = F.softmax(torch.bmm(W, base).permute(0, 2, 1), dim=1)  # (b, k, hw)
+#         m_up = torch.bmm(base, similarity).view(b, c, h, w)  #(b, c, hw)
+#         m_up = self.rebuild_conv(m_up)
+#
+#         f = torch.cat((m_up, m_low), dim=1)
+#         out = self.conv_out(f)
+#
+#         return {"out": out,
+#                 "base": base,
+#                 "A": similarity.view(b, -1, h, w)}
 
 
 
@@ -190,6 +252,7 @@ class EM(nn.Module):
     def forward(self, x):
         # The first 1x1 conv
         x = self.conv1(x)
+        x_trans = x
         # The EM Attention
         b, c, h, w = x.size()
         x = x.view(b, c, h * w)  # b * c * n
@@ -205,7 +268,8 @@ class EM(nn.Module):
                 mu = self._l2norm(mu, dim=1)
 
         # !!! The moving averaging operation is writtern in train.py, which is significant.
-        return mu
+        return {"mu": mu,
+                "x_trans": x_trans}
 
     def _l2norm(self, inp, dim):
         '''Normlize the inp tensor with l2-norm.
@@ -221,6 +285,54 @@ class EM(nn.Module):
             (tensor) The normalized tensor.
         '''
         return inp / (1e-6 + inp.norm(dim=dim, keepdim=True))
+
+
+
+class Attention_UP_decoder(nn.Module):
+    def __init__(self,  channel_h, channel_l, n_codeword=512):
+        super().__init__()
+        self.n_codeword = n_codeword
+        self.channel = channel_h + channel_l
+
+        self.conv_in_h = conv_bn_relu(channel_h, channel_h, kernel_size=1, padding=0)
+        self.conv_in_l = conv_bn_relu(channel_l, channel_l, kernel_size=1, padding=0)
+
+        self.conv_B = nn.Conv2d(self.channel, self.channel, kernel_size=1)
+        self.conv_A = nn.Conv2d(self.channel, n_codeword, kernel_size=1)
+
+        self.conv_G = nn.Conv2d(self.channel, self.channel, kernel_size=1)
+        self.pool = nn.AdaptiveAvgPool2d(1)
+        self.conv_W = nn.Conv2d(self.channel, n_codeword, kernel_size=1)
+
+        self.conv_out = nn.Conv2d(self.channel*2, channel_l, kernel_size=1)
+
+    def forward(self, x_h, x_l):
+        # Multi-scale features fusion.
+        x_h = self.conv_in_h(x_h)
+        x_l = self.conv_in_l(x_l)
+        x_h_up = F.interpolate(x_h, size=x_l.size()[-2:], mode="bilinear", align_corners=True)
+        x_l_down = F.interpolate(x_l, size=x_h.size()[-2:], mode="bilinear", align_corners=True)
+        m_deep = torch.cat((x_l_down, x_h), dim=1)
+        m_low = torch.cat((x_l, x_h_up), dim=1)
+
+        # Holistic codebook generation.
+        b, c, h, w = m_deep.size()
+        A = F.softmax(self.conv_A(m_deep).reshape(b, -1, h*w), dim=-1).permute(0, 2, 1)  #weight (b, h*w, n)
+        B = self.conv_B(m_deep)  # base code word (b, 1024, h, w)
+        B_ = B.reshape(b, -1, h*w)  # (b,1024, h*w)
+        code_word = torch.bmm(B_, A)  # (b, 1024, n)
+
+        # Codeword assembly for high-resolution feature upsampling.
+        G = self.conv_G(m_low)  # (b, 1024, h/8, w/8)
+        W = self.conv_W(G + self.pool(B))  # (b, n, h/8, w/8)
+        b, c, h, w = W.size()
+        W = W.view(b, c, -1)  # (b, n, h/8*w/8)
+        f = torch.bmm(code_word, W).view(b, -1, h, w)
+
+        f = torch.cat((f, G), dim=1)
+        out = self.conv_out(f)
+
+        return out
 
 
 
@@ -247,6 +359,53 @@ class out_conv(nn.Module):
 
 
 
+# class EMUPNet(SegBaseModel):
+#
+#     def __init__(self, n_class, backbone='resnet34', pretrained_base=False, deep_stem=False, **kwargs):
+#         super(EMUPNet, self).__init__(backbone, pretrained_base=pretrained_base, deep_stem=deep_stem, **kwargs)
+#         channels = self.base_channel  # [256, 512, 1024, 2048]
+#         if deep_stem or backbone == 'resnest101':
+#             conv1_channel = 128
+#         else:
+#             conv1_channel = 64
+#
+#         # self.spsp = SPSP(channels[3], scales=[6, 3, 2, 1])  # scales=[6, 3, 2, 1]
+#
+#         self.donv_up1 = EMA_UP_docoder(channels[3], channels[2])
+#         self.donv_up2 = EMA_UP_docoder(channels[2], channels[1])
+#         self.donv_up3 = EMA_UP_docoder(channels[1], channels[0])
+#         self.donv_up4 = EMA_UP_docoder(channels[0], conv1_channel)
+#
+#         self.out_conv = out_conv(conv1_channel, n_class)
+#
+#
+#     def forward(self, x):
+#         outputs = dict()
+#         size = x.size()[2:]
+#
+#         c1, c2, c3, c4, c5 = self.backbone.extract_features(x)
+#
+#         # c5 = self.spsp(c5)
+#
+#         x1 = self.donv_up1(c5, c4)
+#         x2 = self.donv_up2(x1["out"], c3)
+#         x3 = self.donv_up3(x2["out"], c2)
+#         x4 = self.donv_up4(x3["out"], c1)
+#
+#         x = self.out_conv(x4["out"])
+#         x = F.interpolate(x, size, mode='bilinear', align_corners=True)  # 最后上采样
+#
+#         outputs.update({"main_out": x})
+#         outputs.update({"mu1": x1["base"],
+#                         "mu2": x2["base"],
+#                         "mu3": x3["base"],
+#                         "mu4": x4["base"]})
+#         outputs.update({"A1": x1["A"],
+#                         "A2": x2["A"],
+#                         "A3": x3["A"],
+#                         "A4": x4["A"]})
+#         return outputs
+
 class EMUPNet(SegBaseModel):
 
     def __init__(self, n_class, backbone='resnet34', pretrained_base=False, deep_stem=False, **kwargs):
@@ -257,10 +416,10 @@ class EMUPNet(SegBaseModel):
         else:
             conv1_channel = 64
 
-        self.donv_up1 = EMA_UP_docoder(channels[3], channels[2])
-        self.donv_up2 = EMA_UP_docoder(channels[2], channels[1])
-        self.donv_up3 = EMA_UP_docoder(channels[1], channels[0])
-        self.donv_up4 = EMA_UP_docoder(channels[0], conv1_channel)
+        self.donv_up1 = Attention_UP_decoder(channels[3], channels[2])
+        self.donv_up2 = Attention_UP_decoder(channels[2], channels[1])
+        self.donv_up3 = Attention_UP_decoder(channels[1], channels[0])
+        self.donv_up4 = Attention_UP_decoder(channels[0], conv1_channel)
 
         self.out_conv = out_conv(conv1_channel, n_class)
 
@@ -271,22 +430,17 @@ class EMUPNet(SegBaseModel):
 
         c1, c2, c3, c4, c5 = self.backbone.extract_features(x)
 
-        x, mu1 = self.donv_up1(c5, c4)
-        x, mu2 = self.donv_up2(x, c3)
-        x, mu3 = self.donv_up3(x, c2)
-        x, mu4 = self.donv_up4(x, c1)
+        x = self.donv_up1(c5, c4)
+        x = self.donv_up2(x, c3)
+        x = self.donv_up3(x, c2)
+        x = self.donv_up4(x, c1)
 
         x = self.out_conv(x)
         x = F.interpolate(x, size, mode='bilinear', align_corners=True)  # 最后上采样
 
         outputs.update({"main_out": x})
-        outputs.update({"mu1": mu1,
-                        "mu2": mu2,
-                        "mu3": mu3,
-                        "mu4": mu4})
+
         return outputs
-
-
 
 
 

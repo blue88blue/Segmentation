@@ -29,7 +29,12 @@ class ResUnet(SegBaseModel):
         if self.aux:
             self.aux_layer = _FCNHead(256, n_class)
 
-        self.out_conv = nn.Conv2d(channels[0], n_class, kernel_size=1)
+        self.out_conv = nn.Sequential(
+            nn.Conv2d(channels[0], channels[0], kernel_size=3, padding=1, bias=False),
+            nn.BatchNorm2d(channels[0]),
+            nn.ReLU(),
+            nn.Conv2d(channels[0], n_class, kernel_size=1, bias=False),
+        )
 
 
     def forward(self, x):

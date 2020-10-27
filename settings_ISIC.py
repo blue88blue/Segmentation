@@ -1,7 +1,7 @@
 import os
 import time
 import csv
-from dataset.dataset_PALM import myDataset
+from dataset.dataset_ISIC import myDataset
 
 class basic_setting():
 
@@ -12,19 +12,19 @@ class basic_setting():
 
     # #################################### train Data settings ####################################
     dataset_file_list = "utils/PALM_dataset_list.csv"  # 交叉验证所需文件名列表
-    data_root = '/home/sjh/dataset/PLAM/PALM-Training400/PALM-Training400'
-    target_root = "/home/sjh/dataset/PLAM/PALM-Training400/PALM-Training400-Annotation-Lession/Lesion_Masks/Atrophy1"  # 萎缩标签
-    crop_size = (448, 448)
+    data_root = '/media/sjh/disk1T/dataset/ISIC/ISIC2018_Task1-2_Training_Input'
+    target_root = "/media/sjh/disk1T/dataset/ISIC/ISIC2018_Task1_Training_GroundTruth"  # 标签
+    crop_size = (320, 640)
 
     # #################################### train file settings ####################################
-    run_dir = "/media/sjh/disk1T/PALM"                      # 数据集名称
-    val_step = 1                          # 每训练几个epoch进行一次验证
+    run_dir = "ISIC"                      # 数据集名称
+    val_step = 2                          # 每训练几个epoch进行一次验证
 
     # #################################### model settings ####################################
     in_channel = 3
     n_class = 2
-    network = "ResUnet"  # 模型名， 或实验名称
-    note = ""  # 标签(区分不同训练设置)
+    network = "EMUPNet"  # 模型名， 或实验名称
+    note = "OHEMperImage"  # 标签(区分不同训练设置)
     Ulikenet_channel_reduction = 2  # 类Unet模型通道衰减数(默认通道减半)
     backbone = "resnet34"  # 继承自SegBaseModel的模型backbone
     pretrained = True
@@ -46,7 +46,7 @@ class basic_setting():
     # cuda_id = "0"
 
     # #################################### test settings ####################################
-    test_run_file = "2020-1016-2108_18_EMUPNet__fold_4"
+    test_run_file = "2020-1012-2205_29_EMANet_midEMA+SF-NOc1_fold_4"
     label_names = ["bg", "atrophy"]
     plot = True  # 保存测试预测图片
 
@@ -54,7 +54,7 @@ class basic_setting():
     def __init__(self):
         if not os.path.exists("./runs"):
             os.mkdir("./runs")
-        # self.run_dir = "./runs/"+self.run_dir
+        self.run_dir = "./runs/"+self.run_dir
         if not os.path.exists(self.run_dir):
             os.mkdir(self.run_dir)
 
@@ -129,4 +129,3 @@ class basic_setting():
                 if ("__"or "test_" or "val_" or "root" or "logger" or "dir") not in att:
                     f.write(f'{str(att)}:    {str(getattr(self, att))}\n\n')
             f.close()
-

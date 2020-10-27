@@ -1,12 +1,12 @@
 from settings_PALM import *
-
+import torch.nn.functional as F
 from utils import utils
 from torch.utils.data import DataLoader
 import torch
 import torch.nn as nn
 from torch.utils.tensorboard import SummaryWriter
 import os
-from utils.loss import DiceLoss, OhemCrossEntropy
+from utils.loss import DiceLoss, OhemCrossEntropy, OhemCrossEntropy_per_image
 from tqdm import tqdm
 import csv
 import random
@@ -64,15 +64,18 @@ def train(model, device, args, num_fold=0):
 
     # 定义损失函数
     if args.OHEM:
-        criterion = OhemCrossEntropy(thres=0.8, min_kept=40000)
+        criterion = OhemCrossEntropy(thres=0.8, min_kept=10000)
     else:
         criterion = nn.CrossEntropyLoss(torch.tensor(args.class_weight, device=device))
     criterion_dice = DiceLoss()
 
+    cp_manager = utils.save_checkpoint_manager(3)
     step = 0
     for epoch in range(args.num_epochs):
         model.train()
         lr = utils.poly_learning_rate(args, opt, epoch)  # 学习率调节
+        # if epoch == 70 and args.OHEM == True:
+        #     criterion = OhemCrossEntropy_per_image(thres=0.8, min_kept=5000)
 
         with tqdm(total=num_train_data, desc=f'[Train] fold[{num_fold}/{args.k_fold}] Epoch[{epoch + 1}/{args.num_epochs} LR{lr:.8f}] ', unit='img') as pbar:
             for batch in dataloader_train:
@@ -136,8 +139,6 @@ def train(model, device, args, num_fold=0):
 
 
         if (epoch+1) % args.val_step == 0:
-            # 保存模型
-            torch.save(model.state_dict(), os.path.join(args.checkpoint_dir[num_fold], f'CP_epoch{epoch + 1}.pth'))
             # 验证
             mDice, mIoU, mAcc, mSensitivity, mSpecificity = val(model, dataloader_val, num_train_val, device, args)
             writer.add_scalar("Valid/Dice_val", mDice, step)
@@ -150,6 +151,8 @@ def train(model, device, args, num_fold=0):
             with open(args.val_result_file, "a") as f:
                 w = csv.writer(f)
                 w.writerow(val_result)
+            # 保存模型
+            cp_manager.save(model, os.path.join(args.checkpoint_dir[num_fold], f'CP_epoch{epoch + 1}.pth'), float(mDice))
 
 
 def val(model, dataloader, num_train_val,  device, args):
@@ -189,6 +192,9 @@ def val(model, dataloader, num_train_val,  device, args):
     mAcc = np.array(all_acc).mean()
     mSensitivity = np.array(all_sen).mean()
     mSpecificity = np.array(all_spe).mean()
+
+    dice = list(np.array(all_dice).mean(axis=0))
+    print(f"dice{dice}")
     print(f'\r   [VAL] mDice:{mDice:0.2f}, mIoU:{mIoU:0.2f}, mAcc:{mAcc:0.2f}, mSen:{mSensitivity:0.2f}, mSpec:{mSpecificity:0.2f}')
 
     return mDice, mIoU, mAcc, mSensitivity, mSpecificity
@@ -255,6 +261,12 @@ def test(model, device, args, num_fold=0):
                         save_image(pred[b,:,:].cpu().float().unsqueeze(0), os.path.join(args.plot_save_dir, file_name + f"_pred_{dice.mean():.2f}.png"), normalize=True)
                         save_image(image[b,:,:].cpu(), os.path.join(args.plot_save_dir, file[b]))
                         save_image(label[b,:,:].cpu().float().unsqueeze(0), os.path.join(args.plot_save_dir, file_name + f"_label.png"), normalize=True)
+                        if "A4" in outputs.keys():
+                            A_map = F.interpolate(outputs["A2"][b, ...].unsqueeze(0), size=image.size()[-2:], mode="bilinear", align_corners=True).squeeze(0)
+                            save_image(A_map[0, :, :], os.path.join(args.plot_save_dir, file_name + f"_A_0.png"), normalize=True)
+                            save_image(A_map[10, :, :], os.path.join(args.plot_save_dir, file_name + f"_A_10.png"), normalize=True)
+                            save_image(A_map[20, :, :], os.path.join(args.plot_save_dir, file_name + f"_A_20.png"), normalize=True)
+                            save_image(A_map[30, :, :], os.path.join(args.plot_save_dir, file_name + f"_A_30.png"), normalize=True)
                 pbar.update(image.size()[0])
 
     print(f"\r---------Fold {num_fold} Test Result---------")

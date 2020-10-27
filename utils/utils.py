@@ -67,6 +67,7 @@ def save_print_score(all_dice, all_iou, all_acc, all_sen, all_spe, file, label_n
                [all_acc.std()] + \
                [all_sen.std()] + list(all_sen.std(axis=0)) + \
                [all_spe.std()] + list(all_spe.std(axis=0))
+    label_names = label_names[1:]
     title = [' ', 'mDice'] + [name + "_dice" for name in label_names] + \
             ['mIoU'] + [name + "_iou" for name in label_names] + \
             ['mAcc'] + \
@@ -138,6 +139,29 @@ def make_one_hot(targets, num_classes):
     label = torch.cat(label, dim=1)
     return label
 
+
+
+# 保存训练过程中最大的checkpoint
+class save_checkpoint_manager:
+    def __init__(self, max_save=5):
+        self.checkpoints = {}
+        self.max_save = max_save
+
+    def save(self, model, path, score):
+        if len(self.checkpoints) < self.max_save:
+            self.checkpoints[path] = score
+            torch.save(model.state_dict(), path)
+        else:
+            min_value = min(self.checkpoints.values())
+            if score > min_value:
+                for i in self.checkpoints.keys():
+                    if self.checkpoints[i] == min_value:
+                        min_key = i
+                        break
+                os.remove(min_key)
+                self.checkpoints.pop(min_key)
+                self.checkpoints[path] = score
+                torch.save(model.state_dict(), path)
 
 
 

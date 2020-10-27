@@ -2,6 +2,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from model.segbase import SegBaseModel
+from model.my_model.blocks import *
 
 
 class EfficientFCN_Module(nn.Module):
@@ -11,7 +12,7 @@ class EfficientFCN_Module(nn.Module):
 
         self.conv_in = nn.ModuleList()
         for channel in channels:
-            self.conv_in.append(nn.Conv2d(channel, 512, kernel_size=1))
+            self.conv_in.append(conv_bn_relu(channel, 512, kernel_size=1, padding=0))
 
         self.conv_B = nn.Conv2d(512*3, 1024, kernel_size=1)
         self.conv_A = nn.Conv2d(512*3, n_codeword, kernel_size=1)
@@ -50,6 +51,8 @@ class EfficientFCN_Module(nn.Module):
         out = self.conv_out(f)
 
         return out
+
+
 
 
 

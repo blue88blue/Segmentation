@@ -1,4 +1,4 @@
-from model.Unet import Unet
+from model.Unet import Unet, EMUnet
 from model.AttUnet import AttUnet
 from model.PSPNet import PSPNet
 from model.DeepLabV3 import DeepLabV3
@@ -40,6 +40,8 @@ def seg_model(args):
         model = EfficientFCN(args.n_class, args.backbone, aux=args.aux, pretrained_base=args.pretrained, dilated=False, deep_stem=args.deep_stem)
     elif args.network == "EMUPNet":
         model = EMUPNet(args.n_class, args.backbone, pretrained_base=args.pretrained,  deep_stem=args.deep_stem)
+    elif args.network == "EMUnet":
+        model = EMUnet(args.in_channel, args.n_class, channel_reduction=args.Ulikenet_channel_reduction, aux=args.aux)
     else:
         NotImplementedError("not implemented {args.network} model")
 
