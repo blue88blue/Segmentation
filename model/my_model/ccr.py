@@ -8,8 +8,8 @@ from model.segbase import SegBaseModel
 from model.model_utils import init_weights, _FCNHead
 from model.my_model.blocks import *
 from model.my_model.SPUnet import SPSP
-
-
+from .CaCNet import CaC_Module
+from .TANet import Tensor_Attention
 
 def softmax_T(x, dim, T=1):
     x = torch.exp(x)
@@ -109,7 +109,7 @@ class ccr(nn.Module):
 
 
 class EMA_UP_docoder(nn.Module):
-    def __init__(self, channel_h, channel_l, k=64):
+    def __init__(self, channel_h, channel_l, k=32):
         super().__init__()
         self.channel = channel_h + channel_l
 
@@ -359,56 +359,9 @@ class out_conv(nn.Module):
 
 
 
-# class EMUPNet(SegBaseModel):
-#
-#     def __init__(self, n_class, backbone='resnet34', pretrained_base=False, deep_stem=False, **kwargs):
-#         super(EMUPNet, self).__init__(backbone, pretrained_base=pretrained_base, deep_stem=deep_stem, **kwargs)
-#         channels = self.base_channel  # [256, 512, 1024, 2048]
-#         if deep_stem or backbone == 'resnest101':
-#             conv1_channel = 128
-#         else:
-#             conv1_channel = 64
-#
-#         # self.spsp = SPSP(channels[3], scales=[6, 3, 2, 1])  # scales=[6, 3, 2, 1]
-#
-#         self.donv_up1 = EMA_UP_docoder(channels[3], channels[2])
-#         self.donv_up2 = EMA_UP_docoder(channels[2], channels[1])
-#         self.donv_up3 = EMA_UP_docoder(channels[1], channels[0])
-#         self.donv_up4 = EMA_UP_docoder(channels[0], conv1_channel)
-#
-#         self.out_conv = out_conv(conv1_channel, n_class)
-#
-#
-#     def forward(self, x):
-#         outputs = dict()
-#         size = x.size()[2:]
-#
-#         c1, c2, c3, c4, c5 = self.backbone.extract_features(x)
-#
-#         # c5 = self.spsp(c5)
-#
-#         x1 = self.donv_up1(c5, c4)
-#         x2 = self.donv_up2(x1["out"], c3)
-#         x3 = self.donv_up3(x2["out"], c2)
-#         x4 = self.donv_up4(x3["out"], c1)
-#
-#         x = self.out_conv(x4["out"])
-#         x = F.interpolate(x, size, mode='bilinear', align_corners=True)  # 最后上采样
-#
-#         outputs.update({"main_out": x})
-#         outputs.update({"mu1": x1["base"],
-#                         "mu2": x2["base"],
-#                         "mu3": x3["base"],
-#                         "mu4": x4["base"]})
-#         outputs.update({"A1": x1["A"],
-#                         "A2": x2["A"],
-#                         "A3": x3["A"],
-#                         "A4": x4["A"]})
-#         return outputs
-
 class EMUPNet(SegBaseModel):
 
-    def __init__(self, n_class, backbone='resnet34', pretrained_base=False, deep_stem=False, **kwargs):
+    def __init__(self,  n_class, image_size,  backbone='resnet34', pretrained_base=False, deep_stem=False, **kwargs):
         super(EMUPNet, self).__init__(backbone, pretrained_base=pretrained_base, deep_stem=deep_stem, **kwargs)
         channels = self.base_channel  # [256, 512, 1024, 2048]
         if deep_stem or backbone == 'resnest101':
@@ -416,10 +369,15 @@ class EMUPNet(SegBaseModel):
         else:
             conv1_channel = 64
 
-        self.donv_up1 = Attention_UP_decoder(channels[3], channels[2])
-        self.donv_up2 = Attention_UP_decoder(channels[2], channels[1])
-        self.donv_up3 = Attention_UP_decoder(channels[1], channels[0])
-        self.donv_up4 = Attention_UP_decoder(channels[0], conv1_channel)
+        self.tensor_attention5 = Tensor_Attention(image_size[0]//32, image_size[1]//32, channels[3])
+        self.tensor_attention4 = Tensor_Attention(image_size[0] // 16, image_size[1] // 16, channels[2])
+        self.tensor_attention3 = Tensor_Attention(image_size[0] // 8, image_size[1] // 8, channels[1])
+        # self.tensor_attention2 = Tensor_Attention(image_size[0] // 4, image_size[1] // 4, channels[0])
+
+        self.donv_up1 = EMA_UP_docoder(channels[3], channels[2], k=32)
+        self.donv_up2 = EMA_UP_docoder(channels[2], channels[1], k=32)
+        self.donv_up3 = EMA_UP_docoder(channels[1], channels[0], k=32)
+        self.donv_up4 = EMA_UP_docoder(channels[0], conv1_channel, k=32)
 
         self.out_conv = out_conv(conv1_channel, n_class)
 
@@ -430,17 +388,69 @@ class EMUPNet(SegBaseModel):
 
         c1, c2, c3, c4, c5 = self.backbone.extract_features(x)
 
-        x = self.donv_up1(c5, c4)
-        x = self.donv_up2(x, c3)
-        x = self.donv_up3(x, c2)
-        x = self.donv_up4(x, c1)
+        c5 = self.tensor_attention5(c5)
 
-        x = self.out_conv(x)
+        x1 = self.donv_up1(c5, c4)
+
+        x1_ = self.tensor_attention4(x1["out"])
+
+        x2 = self.donv_up2(x1_, c3)
+
+        x2_ = self.tensor_attention3(x2["out"])
+
+        x3 = self.donv_up3(x2_, c2)
+
+        x4 = self.donv_up4(x3["out"], c1)
+
+        x = self.out_conv(x4["out"])
         x = F.interpolate(x, size, mode='bilinear', align_corners=True)  # 最后上采样
 
         outputs.update({"main_out": x})
-
+        outputs.update({"mu1": x1["base"],
+                        "mu2": x2["base"],
+                        "mu3": x3["base"],
+                        "mu4": x4["base"]})
+        outputs.update({"A1": x1["A"],
+                        "A2": x2["A"],
+                        "A3": x3["A"],
+                        "A4": x4["A"]})
         return outputs
+
+# class EMUPNet(SegBaseModel):
+#
+#     def __init__(self, n_class, backbone='resnet34', pretrained_base=False, deep_stem=False, **kwargs):
+#         super(EMUPNet, self).__init__(backbone, pretrained_base=pretrained_base, deep_stem=deep_stem, **kwargs)
+#         channels = self.base_channel  # [256, 512, 1024, 2048]
+#         if deep_stem or backbone == 'resnest101':
+#             conv1_channel = 128
+#         else:
+#             conv1_channel = 64
+#
+#         self.donv_up1 = Attention_UP_decoder(channels[3], channels[2])
+#         self.donv_up2 = Attention_UP_decoder(channels[2], channels[1])
+#         self.donv_up3 = Attention_UP_decoder(channels[1], channels[0])
+#         self.donv_up4 = Attention_UP_decoder(channels[0], conv1_channel)
+#
+#         self.out_conv = out_conv(conv1_channel, n_class)
+#
+#
+#     def forward(self, x):
+#         outputs = dict()
+#         size = x.size()[2:]
+#
+#         c1, c2, c3, c4, c5 = self.backbone.extract_features(x)
+#
+#         x = self.donv_up1(c5, c4)
+#         x = self.donv_up2(x, c3)
+#         x = self.donv_up3(x, c2)
+#         x = self.donv_up4(x, c1)
+#
+#         x = self.out_conv(x)
+#         x = F.interpolate(x, size, mode='bilinear', align_corners=True)  # 最后上采样
+#
+#         outputs.update({"main_out": x})
+#
+#         return outputs
 
 
 

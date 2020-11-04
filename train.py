@@ -19,7 +19,6 @@ from torchvision.utils import save_image
 from model.choose_model import seg_model
 
 
-
 def main(args, num_fold=0):
     # 模型选择
     model = seg_model(args)
@@ -74,8 +73,6 @@ def train(model, device, args, num_fold=0):
     for epoch in range(args.num_epochs):
         model.train()
         lr = utils.poly_learning_rate(args, opt, epoch)  # 学习率调节
-        # if epoch == 70 and args.OHEM == True:
-        #     criterion = OhemCrossEntropy_per_image(thres=0.8, min_kept=5000)
 
         with tqdm(total=num_train_data, desc=f'[Train] fold[{num_fold}/{args.k_fold}] Epoch[{epoch + 1}/{args.num_epochs} LR{lr:.8f}] ', unit='img') as pbar:
             for batch in dataloader_train:

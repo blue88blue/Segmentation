@@ -18,13 +18,13 @@ class basic_setting():
 
     # #################################### train file settings ####################################
     run_dir = "/media/sjh/disk1T/PALM"                      # 数据集名称
-    val_step = 1                          # 每训练几个epoch进行一次验证
+    val_step = 2                          # 每训练几个epoch进行一次验证
 
     # #################################### model settings ####################################
     in_channel = 3
     n_class = 2
-    network = "ResUnet"  # 模型名， 或实验名称
-    note = ""  # 标签(区分不同训练设置)
+    network = "EMUPNet"  # 模型名， 或实验名称
+    note = "4TA"  # 标签(区分不同训练设置)
     Ulikenet_channel_reduction = 2  # 类Unet模型通道衰减数(默认通道减半)
     backbone = "resnet34"  # 继承自SegBaseModel的模型backbone
     pretrained = True
@@ -40,13 +40,13 @@ class basic_setting():
     num_workers = 8
     aux_weight = 0.5
     dice_weight = 0.5
-    lr = 1e-4
+    lr = 0.0001
     momentum = 0.9
     weight_decay = 1e-4
     # cuda_id = "0"
 
     # #################################### test settings ####################################
-    test_run_file = "2020-1016-2108_18_EMUPNet__fold_4"
+    test_run_file = "2020-1030-1831_47_TANet_sigmoid_fold_4__81.6056"
     label_names = ["bg", "atrophy"]
     plot = True  # 保存测试预测图片
 

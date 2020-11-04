@@ -29,6 +29,8 @@ class myDataset(Dataset):
                 raise NotImplementedError
             print(f"{data_mode} dataset fold{num_fold}/{k_fold}: {len(self.image_files)} images")
 
+        # self.weight = torch.FloatTensor([[-1, -1, -1],[-1, 8, -1], [-1, -1, -1]]).unsqueeze(0).unsqueeze(0)
+
     def __len__(self):
         return len(self.image_files)
 
@@ -61,9 +63,12 @@ class myDataset(Dataset):
         image, label = pad(self.crop_size, image, label)
         label = label.squeeze()
 
+        # edge_label = F.conv2d(label.unsqueeze(0).unsqueeze(0), self.weight, padding=1)
+        # edge_label = (edge_label.squeeze() > 0).float()
         return {
             "image": image,
             "label": label,
+            # "edge_label": edge_label,
             "file": file}
 
 

@@ -1,4 +1,4 @@
-from model.Unet import Unet, EMUnet
+from model.Unet import Unet
 from model.AttUnet import AttUnet
 from model.PSPNet import PSPNet
 from model.DeepLabV3 import DeepLabV3
@@ -11,6 +11,9 @@ from model.my_model.EMANet import EMANet
 from model.deeplabv3_plus import DeepLabV3Plus
 from model.my_model.EfficientFCN import EfficientFCN
 from model.my_model.ccr import EMUPNet
+from model.my_model.CaCNet import CaCNet
+from model.my_model.Border_ResUnet import Border_ResUnet
+from model.my_model.TANet import TANet
 
 
 def seg_model(args):
@@ -39,9 +42,13 @@ def seg_model(args):
     elif args.network == "EfficientFCN":
         model = EfficientFCN(args.n_class, args.backbone, aux=args.aux, pretrained_base=args.pretrained, dilated=False, deep_stem=args.deep_stem)
     elif args.network == "EMUPNet":
-        model = EMUPNet(args.n_class, args.backbone, pretrained_base=args.pretrained,  deep_stem=args.deep_stem)
-    elif args.network == "EMUnet":
-        model = EMUnet(args.in_channel, args.n_class, channel_reduction=args.Ulikenet_channel_reduction, aux=args.aux)
+        model = EMUPNet(args.n_class, args.crop_size, args.backbone, pretrained_base=args.pretrained,  deep_stem=args.deep_stem)
+    elif args.network == "CaCNet":
+        model = CaCNet(args.n_class, args.backbone, aux=args.aux, pretrained_base=args.pretrained, dilated=args.dilated, deep_stem=args.deep_stem)
+    elif args.network == "Border_ResUnet":
+        model = Border_ResUnet(args.n_class, args.backbone, aux=args.aux, pretrained_base=args.pretrained, dilated=args.dilated, deep_stem=args.deep_stem)
+    elif args.network == "TANet":
+        model = TANet(args.n_class, args.crop_size, args.backbone, aux=args.aux, pretrained_base=args.pretrained, dilated=args.dilated, deep_stem=args.deep_stem)
     else:
         NotImplementedError("not implemented {args.network} model")
 
