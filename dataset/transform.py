@@ -77,7 +77,8 @@ def convert_to_tensor(image, label=None):
     # image = image - torch.Tensor(np.array([0.5, 0.5, 0.5]))
     if len(image.size()) == 2:
         image = image.unsqueeze(0)
-    image = image.permute(2, 0, 1)
+    else:
+        image = image.permute(2, 0, 1)
 
     if label is not None:
         label = torch.FloatTensor(np.array(label))

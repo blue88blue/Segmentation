@@ -5,14 +5,16 @@ from PIL import Image
 from torch.nn import functional as F
 from settings_COVID19 import *
 import numpy as np
-import csv
+from utils.utils import slices2volume_mask
 from tqdm import tqdm
 #models
 from model.choose_model import seg_model
 
 # #################################### predict settings 预测提交结果 ####################################
-pred_data_root = "/media/sjh/disk1T/dataset/COVID-19-20_v2/validation_slices/image"  # 预测图片路径
+original_volume_dir = "/media/sjh/disk1T/dataset/COVID-19-20_v2/Validation"  # volume
+pred_data_root = "/media/sjh/disk1T/dataset/COVID-19-20_v2/validation_slices/image"  # 预测图片路径 slices
 pred_dir = "segmentation"     # mask
+result_dir = "result"  # nii.gz
 model_dir = "/media/sjh/disk1T/COVID19/2020-1107-1429_45_Unet__fold_6/checkpoints/fold_1/CP_epoch4.pth"
 # #################################### predict settings 预测提交结果 ####################################
 
@@ -56,9 +58,13 @@ if __name__ == "__main__":
     pred_dir = os.path.join(args.dir, pred_dir)
     if not os.path.exists(pred_dir):
         os.mkdir(pred_dir)
+    result_dir = os.path.join(args.dir, result_dir)
+    if not os.path.exists(result_dir):
+        os.mkdir(result_dir)
 
     model.to(device)
     model.load_state_dict(torch.load(model_dir, map_location=device))
     print("model loaded!")
 
     pred(model, device, args)
+    slices2volume_mask(original_volume_dir, pred_dir, result_dir)

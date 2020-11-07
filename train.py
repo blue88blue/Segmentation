@@ -1,4 +1,4 @@
-from settings_PALM import *
+from settings_COVID19 import *
 import torch.nn.functional as F
 from utils import utils
 from torch.utils.data import DataLoader

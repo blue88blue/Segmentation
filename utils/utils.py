@@ -8,7 +8,8 @@ import csv
 import os
 import random
 import h5py
-
+from PIL import Image
+import SimpleITK as sitk
 
 def fast_hist(label_true, label_pred, n_class):
     '''
@@ -185,3 +186,22 @@ def load_h5(path):
 
 
 
+def slices2volume_mask(original_volume_dir, pred_mask_dir, out_dir):
+    if not os.path.exists(out_dir):
+        os.mkdir(out_dir)
+    volume_filenames = sorted(os.path.splitext(file)[0] for file in  os.listdir(original_volume_dir))
+    mask_files = sorted(os.listdir(pred_mask_dir))
+
+    for vfile in volume_filenames:
+        volume_mask = []
+        slices_files = [mfile for mfile in mask_files if vfile in mfile]
+        num = len(slices_files)
+        for i in range(num):
+            file = vfile+f"_{i}.png"
+            image = np.array(np.array(Image.open(os.path.join(pred_mask_dir, file))) == 255, np.uint16)
+            image = np.expand_dims(image, axis=0)
+            volume_mask.append(image)
+        # 保存volume mask
+        volume_mask = np.concatenate(volume_mask, axis=0)
+        volume_mask = sitk.GetImageFromArray(volume_mask)
+        sitk.WriteImage(volume_mask, os.path.join(out_dir, vfile+'.nii.gz'))
