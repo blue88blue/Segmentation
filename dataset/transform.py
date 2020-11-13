@@ -112,6 +112,8 @@ def scale_adaptive(crop_size, image, label=None):
     return image, label
 
 
+
+
 # resize
 def resize(crop_size, image, label=None):
     image = F.interpolate(image.unsqueeze(0), size=crop_size, mode='bilinear', align_corners=True).squeeze(0)

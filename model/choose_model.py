@@ -14,7 +14,7 @@ from model.my_model.ccr import EMUPNet
 from model.my_model.CaCNet import CaCNet
 from model.my_model.Border_ResUnet import Border_ResUnet
 from model.my_model.TANet import TANet
-
+from model.my_model.CMSINet import CMSINet
 
 def seg_model(args):
     if args.network == "Unet":
@@ -49,6 +49,8 @@ def seg_model(args):
         model = Border_ResUnet(args.n_class, args.backbone, aux=args.aux, pretrained_base=args.pretrained, dilated=args.dilated, deep_stem=args.deep_stem)
     elif args.network == "TANet":
         model = TANet(args.n_class, args.crop_size, args.backbone, aux=args.aux, pretrained_base=args.pretrained, dilated=args.dilated, deep_stem=args.deep_stem)
+    elif args.network == "CMSINet":
+        model = CMSINet(args.n_class, args.backbone, aux=args.aux, pretrained_base=args.pretrained, dilated=args.dilated, deep_stem=args.deep_stem)
     else:
         NotImplementedError("not implemented {args.network} model")
 

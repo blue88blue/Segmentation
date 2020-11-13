@@ -1,4 +1,4 @@
-from settings_COVID19 import *
+from settings_PALM import *
 import torch.nn.functional as F
 from utils import utils
 from torch.utils.data import DataLoader
@@ -149,7 +149,10 @@ def train(model, device, args, num_fold=0):
                 w = csv.writer(f)
                 w.writerow(val_result)
             # 保存模型
-            cp_manager.save(model, os.path.join(args.checkpoint_dir[num_fold], f'CP_epoch{epoch + 1}.pth'), float(mDice))
+            cp_manager.save(model, os.path.join(args.checkpoint_dir[num_fold], f'CP_epoch{epoch + 1}_{float(mDice):.4f}.pth'), float(mDice))
+            if (epoch + 1) == (args.num_epochs):
+                torch.save(model.state_dict(), os.path.join(args.checkpoint_dir[num_fold], f'CP_epoch{epoch + 1}_{float(mDice):.4f}.pth'))
+
 
 
 def val(model, dataloader, num_train_val,  device, args):
@@ -258,12 +261,6 @@ def test(model, device, args, num_fold=0):
                         save_image(pred[b,:,:].cpu().float().unsqueeze(0), os.path.join(args.plot_save_dir, file_name + f"_pred_{dice.mean():.2f}.png"), normalize=True)
                         save_image(image[b,:,:].cpu(), os.path.join(args.plot_save_dir, file[b]))
                         save_image(label[b,:,:].cpu().float().unsqueeze(0), os.path.join(args.plot_save_dir, file_name + f"_label.png"), normalize=True)
-                        if "A4" in outputs.keys():
-                            A_map = F.interpolate(outputs["A2"][b, ...].unsqueeze(0), size=image.size()[-2:], mode="bilinear", align_corners=True).squeeze(0)
-                            save_image(A_map[0, :, :], os.path.join(args.plot_save_dir, file_name + f"_A_0.png"), normalize=True)
-                            save_image(A_map[10, :, :], os.path.join(args.plot_save_dir, file_name + f"_A_10.png"), normalize=True)
-                            save_image(A_map[20, :, :], os.path.join(args.plot_save_dir, file_name + f"_A_20.png"), normalize=True)
-                            save_image(A_map[30, :, :], os.path.join(args.plot_save_dir, file_name + f"_A_30.png"), normalize=True)
                 pbar.update(image.size()[0])
 
     print(f"\r---------Fold {num_fold} Test Result---------")

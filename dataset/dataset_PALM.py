@@ -3,6 +3,7 @@ import csv
 from .transform import*
 
 
+
 class myDataset(Dataset):
     def __init__(self, data_root, target_root, crop_size, data_mode, k_fold=None, imagefile_csv=None, num_fold=None):
         self.crop_size = crop_size  # h, w
@@ -72,6 +73,7 @@ class myDataset(Dataset):
             "file": file}
 
 
+
 class predict_Dataset(Dataset):
     def __init__(self, data_root, crop_size):
         super(predict_Dataset, self).__init__()
@@ -96,4 +98,5 @@ class predict_Dataset(Dataset):
 
         return {
             "image": image,
-            "file_name": file_name}
+            "file_name": file_name,
+            "image_size": torch.tensor(image_size)}

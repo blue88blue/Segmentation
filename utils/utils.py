@@ -198,10 +198,49 @@ def slices2volume_mask(original_volume_dir, pred_mask_dir, out_dir):
         num = len(slices_files)
         for i in range(num):
             file = vfile+f"_{i}.png"
-            image = np.array(np.array(Image.open(os.path.join(pred_mask_dir, file))) == 255, np.uint16)
+            image = np.array(np.array(Image.open(os.path.join(pred_mask_dir, file))) == 255, np.uint8)
             image = np.expand_dims(image, axis=0)
             volume_mask.append(image)
         # 保存volume mask
         volume_mask = np.concatenate(volume_mask, axis=0)
         volume_mask = sitk.GetImageFromArray(volume_mask)
+        # 设置数据信息
+        original_volume = sitk.ReadImage(os.path.join(original_volume_dir, vfile+".nii"))
+        volume_mask.SetSpacing(original_volume.GetSpacing())
+        volume_mask.SetOrigin(original_volume.GetOrigin())
+        volume_mask.SetDirection(original_volume.GetDirection())
+        if "ct" in vfile:
+            vfile = vfile[:-3]
+        vfile = vfile[18:]
         sitk.WriteImage(volume_mask, os.path.join(out_dir, vfile+'.nii.gz'))
+        print(vfile)
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        

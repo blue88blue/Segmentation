@@ -107,7 +107,7 @@ def COVID_19_volume2PNG(image_dir, out_dir):
     out_mask_dir = os.path.join(out_dir, "label")  # 输出标签地址
     if not os.path.exists(out_mask_dir):
         os.mkdir(out_mask_dir)
-
+    
     for i in range(len(volume_list)):
 
         # 图像3D
@@ -115,29 +115,42 @@ def COVID_19_volume2PNG(image_dir, out_dir):
         img = sitk.ReadImage(volume_file)
         image = sitk.GetArrayViewFromImage(img)  # 转换为numpy矩阵
         ###############
-        image = np.where(image > (-1400), image, -1400)
-        image = np.where(image < 1500, image, 1500)
+        image = np.where(image>(-1400), image, -1400)
+        image = np.where(image<1500, image, 1500)
         image = image - np.min(image)
-        image = (image / 2900.0) * 255
+        image = (image/2900.0)*255
+        
+
+#         roi = np.where(roi < 150, roi, 0)
+#         roi_x = np.expand_dims(image.sum(axis=1), 1)
+#         roi_y = np.expand_dims(image.sum(axis=2), 2)
+#         roi = roi_x*roi_y
+#         roi = roi/roi.max()*255
+        
         ###############
         # 标签3D
         volume_file_name = os.path.splitext(volume_list[i])[0]
         if "ct" in volume_file_name:
             volume_file_name = volume_file_name[:-3]
-        volume_mask = os.path.join(image_dir, volume_file_name + "_seg.nii")
+        volume_mask = os.path.join(image_dir, volume_file_name+"_seg.nii")
         if os.path.exists(volume_mask):
             m = sitk.ReadImage(volume_mask)
-            mask = np.array(sitk.GetArrayViewFromImage(m), np.int8) * 255  # 转换为numpy矩阵 int8
+            print(m.GetPixelIDTypeAsString())
+            mask = np.array(sitk.GetArrayViewFromImage(m), np.int8)*255  # 转换为numpy矩阵 int8
         else:
             mask = None
+            
         # 将每个切片保存
-        print(f"\r{i + 1} {image.shape}", end="")
+        print(f"\r{i+1} {image.shape}", end="")
+        
         for num in range(image.shape[0]):
+#             roi_ = Image.fromarray(roi[num, ...]).convert("L")
+#             roi_.save(os.path.join(out_image_dir, volume_file_name+f"_{num}_roi.png"))
             image_ = Image.fromarray(image[num, ...]).convert("L")
-            image_.save(os.path.join(out_image_dir, volume_file_name + f"_{num}.png"))
+            image_.save(os.path.join(out_image_dir, volume_file_name+f"_{num}.png"))
             if mask is not None:
                 mask_ = Image.fromarray(mask[num, ...]).convert("L")
-                mask_.save(os.path.join(out_mask_dir, volume_file_name + f"_{num}.png"))
+                mask_.save(os.path.join(out_mask_dir, volume_file_name+f"_{num}.png"))
 
 
 
