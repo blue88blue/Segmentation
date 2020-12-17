@@ -32,11 +32,14 @@ class CaC_Module(nn.Module):
         weight2 = F.conv2d(x_temp, CaC_kernel, groups=b*c, padding=self.dialted_rates[1], dilation=self.dialted_rates[1])
         weight3 = F.conv2d(x_temp, CaC_kernel, groups=b*c, padding=self.dialted_rates[2], dilation=self.dialted_rates[2])
 
-        weight = torch.sigmoid(weight1) + torch.sigmoid(weight2) + torch.sigmoid(weight3)  # (b*c, h, w)
-        weight = weight.reshape(b, c, h, w)
+        # weight = torch.sigmoid(weight1) + torch.sigmoid(weight2) + torch.sigmoid(weight3)  # (b*c, h, w)
+        # weight = weight.reshape(b, c, h, w)
 
-        return torch.mul(x, weight)
+        # return torch.mul(x, weight)
 
+        x = weight1 + weight2 + weight3
+        x = x.reshape(b, c, h, w)
+        return x
 
 
 

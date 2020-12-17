@@ -30,8 +30,10 @@ class EfficientFCN_Module(nn.Module):
             e.append(self.conv_in[i](features[i]))
         down_size = e[2].size()[-2:]
         up_size = e[0].size()[-2:]
-        m32 = torch.cat((F.upsample_bilinear(e[0], size=down_size), F.upsample_bilinear(e[1], size=down_size), e[2]), dim=1)
-        m8 = torch.cat((e[0], F.upsample_bilinear(e[1], size=up_size), F.upsample_bilinear(e[2], size=up_size)), dim=1)
+        m32 = torch.cat((F.interpolate(e[0], size=down_size, mode="bilinear", align_corners=True),
+                         F.interpolate(e[1], size=down_size, mode="bilinear", align_corners=True), e[2]), dim=1)
+        m8 = torch.cat((e[0], F.interpolate(e[1], size=up_size, mode="bilinear", align_corners=True),
+                        F.interpolate(e[2], size=up_size, mode="bilinear", align_corners=True)), dim=1)
 
         # Holistic codebook generation.
         b, c, h, w = m32.size()
@@ -80,7 +82,7 @@ class EfficientFCN(SegBaseModel):
         c5 = self.backbone.layer4(c4)  # 1/32   512
 
         x = self.effcient_module([c3, c4, c5])
-        x = F.upsample_bilinear(x, size=size)
+        x = F.interpolate(x, size=size, mode="bilinear", align_corners=True)
 
         outputs.update({"main_out": x})
 

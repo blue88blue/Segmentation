@@ -23,6 +23,7 @@ class myDataset(Dataset):
             fold = num_fold - 1
             if data_mode == "train":
                 self.image_files = image_files[0: fold*fold_size] + image_files[fold*fold_size+fold_size:]
+                # self.image_files = self.image_files[:150]  ########## 150张标注图片
                 self.image_files = self.image_files * 2   # ################ *2
             elif data_mode == "val" or data_mode == "test":
                 self.image_files = image_files[fold*fold_size: fold*fold_size+fold_size]
@@ -80,7 +81,7 @@ class predict_Dataset(Dataset):
         self.data_root = data_root
         self.crop_size = crop_size
 
-        self.files = os.listdir(data_root)
+        self.files = sorted(os.listdir(data_root))
         print(f"pred dataset:{len(self.files)}")
 
     def __len__(self):

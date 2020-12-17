@@ -11,6 +11,7 @@ from tqdm import tqdm
 import csv
 import random
 import numpy as np
+import sys
 from PIL import Image
 import time
 import torchsummary
@@ -30,7 +31,15 @@ def main(args, num_fold=0):
     print(f'   [network: {args.network}  device: {device}]')
 
     if args.mode == "train":
-        train(model, device, args, num_fold=num_fold)
+        try:
+            train(model, device, args, num_fold=num_fold)
+        except KeyboardInterrupt:
+            torch.save(model.state_dict(), os.path.join(args.checkpoint_dir[num_fold], 'INTERRUPTED.pth'))
+            print('Saved interrupt')
+            try:
+                sys.exit(0)
+            except SystemExit:
+                os._exit(0)
 
     elif args.mode == "test":
         if args.k_fold is not None:
@@ -58,8 +67,10 @@ def train(model, device, args, num_fold=0):
     ####################
     writer = SummaryWriter(log_dir=args.log_dir[num_fold], comment=f'tb_log')
 
-    # opt = torch.optim.SGD(model.parameters(), lr=args.lr, momentum=args.momentum, weight_decay=args.weight_decay)
-    opt = torch.optim.Adam(model.parameters(), lr=args.lr, weight_decay=args.weight_decay)
+    if args.optim == "SGD":
+        opt = torch.optim.SGD(model.parameters(), lr=args.lr, momentum=args.momentum, weight_decay=args.weight_decay)
+    else:
+        opt = torch.optim.Adam(model.parameters(), lr=args.lr, weight_decay=args.weight_decay)
 
     # 定义损失函数
     if args.OHEM:
@@ -94,7 +105,9 @@ def train(model, device, args, num_fold=0):
                 diceloss = criterion_dice(main_out, label)
                 celoss = criterion(main_out, label)
                 totall_loss = celoss + diceloss * args.dice_weight
-                if args.aux:  # 计算辅助损失函数
+                if "sim_loss" in outputs.keys():
+                    totall_loss += outputs["sim_loss"]*0.2
+                if "aux_out" in outputs.keys():  # 计算辅助损失函数
                     aux_losses = 0
                     for aux_p in outputs["aux_out"]:
                         auxloss = (criterion(aux_p, label) + criterion_dice(aux_p, label) * args.dice_weight) * args.aux_weight
@@ -106,8 +119,10 @@ def train(model, device, args, num_fold=0):
                         mu = outputs["mu"]
                         mu = mu.mean(dim=0, keepdim=True)
                         momentum = 0.9
-                        model.emau.mu *= momentum
-                        model.emau.mu += mu * (1 - momentum)
+                        # model.emau.mu *= momentum
+                        # model.emau.mu += mu * (1 - momentum)
+                        model.effcient_module.em.mu *= momentum
+                        model.effcient_module.em.mu += mu * (1 - momentum)
                 if "mu1" in outputs.keys():
                     with torch.no_grad():
                         mu1 = outputs['mu1'].mean(dim=0, keepdim=True)
@@ -129,6 +144,8 @@ def train(model, device, args, num_fold=0):
                     writer.add_scalar("Train/Dice_loss", diceloss.item(), step)
                     if args.aux:
                         writer.add_scalar("Train/aux_losses",aux_losses, step)
+                    if "sim_loss" in outputs.keys():
+                        writer.add_scalar("Train/sim_loss", outputs["sim_loss"], step)
                     writer.add_scalar("Train/Totall_loss", totall_loss.item(), step)
 
                 pbar.set_postfix(**{'loss': totall_loss.item()})  # 显示loss
@@ -210,8 +227,13 @@ def test(model, device, args, num_fold=0):
         best_epoch = utils.best_model_in_fold(val_result, num_fold)
     else:
         best_epoch = args.num_epochs
+
     # 导入模型
-    model_dir = os.path.join(args.checkpoint_dir[num_fold], f'CP_epoch{best_epoch}.pth')
+    model_list = os.listdir(args.checkpoint_dir[num_fold])
+    model_dir = [x for x in model_list if str(best_epoch) in x][0]
+    model_dir = os.path.join(args.checkpoint_dir[num_fold], model_dir)
+    if not os.path.exists(model_dir):
+        model_dir = os.path.join(args.checkpoint_dir[num_fold], f'CP_epoch{best_epoch}.pth')
     model.load_state_dict(torch.load(model_dir, map_location=device))
     print(f'\rtest model loaded: [fold:{num_fold}] [best_epoch:{best_epoch}]')
 
@@ -258,9 +280,47 @@ def test(model, device, args, num_fold=0):
                     all_spe.append(list(Specificity))
                     if args.plot:
                         file_name, _ = os.path.splitext(file[b])
-                        save_image(pred[b,:,:].cpu().float().unsqueeze(0), os.path.join(args.plot_save_dir, file_name + f"_pred_{dice.mean():.2f}.png"), normalize=True)
-                        save_image(image[b,:,:].cpu(), os.path.join(args.plot_save_dir, file[b]))
-                        save_image(label[b,:,:].cpu().float().unsqueeze(0), os.path.join(args.plot_save_dir, file_name + f"_label.png"), normalize=True)
+                        # save_image(pred[b,:,:].cpu().float().unsqueeze(0), os.path.join(args.plot_save_dir, file_name + f"_pred_{dice.mean():.2f}.png"), normalize=True)
+                        # save_image(image[b,:,:].cpu(), os.path.join(args.plot_save_dir, file[b]))
+                        # save_image(label[b,:,:].cpu().float().unsqueeze(0), os.path.join(args.plot_save_dir, file_name + f"_label.png"), normalize=True)
+                        if "A4" in outputs.keys():
+                            for i in range(0, 25, 5):
+                                proj_map = F.interpolate(outputs["A1"][b, ...].unsqueeze(0), size=image.size()[-2:],
+                                                      mode="bilinear", align_corners=True).squeeze(0)
+                                save_image(proj_map[i, :, :], os.path.join(args.plot_save_dir, file_name + f"_A1_{i}.png"),
+                                           normalize=True)
+                            for i in range(0, 25, 5):
+                                proj_map = F.interpolate(outputs["A2"][b, ...].unsqueeze(0), size=image.size()[-2:],
+                                                      mode="bilinear", align_corners=True).squeeze(0)
+                                save_image(proj_map[i, :, :], os.path.join(args.plot_save_dir, file_name + f"_A2_{i}.png"),
+                                           normalize=True)
+                            for i in range(0, 25, 5):
+                                proj_map = F.interpolate(outputs["A3"][b, ...].unsqueeze(0), size=image.size()[-2:],
+                                                      mode="bilinear", align_corners=True).squeeze(0)
+                                save_image(proj_map[i, :, :], os.path.join(args.plot_save_dir, file_name + f"_A3_{i}.png"),
+                                           normalize=True)
+                            for i in range(0, 25, 5):
+                                proj_map = F.interpolate(outputs["A4"][b, ...].unsqueeze(0), size=image.size()[-2:],
+                                                      mode="bilinear", align_corners=True).squeeze(0)
+                                save_image(proj_map[i, :, :], os.path.join(args.plot_save_dir, file_name + f"_A4_{i}.png"),
+                                           normalize=True)
+                        # if "x_proj_1" in outputs.keys():
+                        #     for i in range(7):
+                        #         proj_map = F.interpolate(outputs["x_proj_1"][b, ...].unsqueeze(0), size=image.size()[-2:],
+                        #                               mode="bilinear", align_corners=True).squeeze(0)
+                        #         save_image(proj_map[i, :, :], os.path.join(args.plot_save_dir, file_name + f"_A1_{i}.png"),
+                        #                    normalize=True)
+                        #     for i in range(7):
+                        #         proj_map = F.interpolate(outputs["x_proj_2"][b, ...].unsqueeze(0), size=image.size()[-2:],
+                        #                               mode="bilinear", align_corners=True).squeeze(0)
+                        #         save_image(proj_map[i, :, :], os.path.join(args.plot_save_dir, file_name + f"_A2_{i}.png"),
+                        #                    normalize=True)
+                        save_image(image[b, :, :].cpu(), os.path.join(args.plot_save_dir, file[b]))
+                        pred_image = pred[b, :, :].unsqueeze(0)
+                        true_mask = label[b, :, :].unsqueeze(0)
+                        result_image = torch.cat((pred_image, true_mask, torch.zeros_like(pred_image)), dim=0).permute(1, 2, 0).cpu().numpy()
+                        result_image = Image.fromarray(np.uint8(result_image) * 255)
+                        result_image.save(args.plot_save_dir + f"/{file_name}({dice.mean():.2f}).png")
                 pbar.update(image.size()[0])
 
     print(f"\r---------Fold {num_fold} Test Result---------")

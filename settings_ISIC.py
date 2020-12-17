@@ -6,25 +6,25 @@ from dataset.dataset_ISIC import myDataset
 class basic_setting():
 
     mode = "train_test"                             # train,  test,  train_test
-    k_fold = 4                              # None 不交叉验证 验证集即为训练集
+    k_fold = 5                              # None 不交叉验证 验证集即为训练集
     start_fold = 0
-    end_fold = k_fold
+    end_fold = 1
 
     # #################################### train Data settings ####################################
-    dataset_file_list = "utils/PALM_dataset_list.csv"  # 交叉验证所需文件名列表
-    data_root = '/media/sjh/disk1T/dataset/ISIC/ISIC2018_Task1-2_Training_Input'
-    target_root = "/media/sjh/disk1T/dataset/ISIC/ISIC2018_Task1_Training_GroundTruth"  # 标签
-    crop_size = (320, 640)
+    dataset_file_list = "utils/ISIC_dataset_list.csv"  # 交叉验证所需文件名列表
+    data_root = '/media/sjh/disk1T/dataset/ISIC/ISIC2018_Task1-2_Training_Input_resize'
+    target_root = "/media/sjh/disk1T/dataset/ISIC/ISIC2018_Task1_Training_GroundTruth_resize"  # 标签
+    crop_size = (192, 256)
 
     # #################################### train file settings ####################################
-    run_dir = "ISIC"                      # 数据集名称
+    run_dir = "/media/sjh/disk1T/RUNS/ISIC"                  # 数据集名称
     val_step = 2                          # 每训练几个epoch进行一次验证
 
     # #################################### model settings ####################################
     in_channel = 3
     n_class = 2
-    network = "EMUPNet"  # 模型名， 或实验名称
-    note = "OHEMperImage"  # 标签(区分不同训练设置)
+    network = "ResUnet"  # 模型名， 或实验名称
+    note = "200label"  # 标签(区分不同训练设置)
     Ulikenet_channel_reduction = 2  # 类Unet模型通道衰减数(默认通道减半)
     backbone = "resnet34"  # 继承自SegBaseModel的模型backbone
     pretrained = True
@@ -33,14 +33,15 @@ class basic_setting():
     aux = False
 
     # #################################### train settings ####################################
+    optim = "SGD"
     class_weight = [0.5, 0.5]
     OHEM = False
-    num_epochs = 250
-    batch_size = 4
-    num_workers = 8
+    num_epochs = 100
+    batch_size = 8
+    num_workers = 12
     aux_weight = 0.5
     dice_weight = 0.5
-    lr = 1e-4
+    lr = 0.01
     momentum = 0.9
     weight_decay = 1e-4
     # cuda_id = "0"
@@ -54,7 +55,7 @@ class basic_setting():
     def __init__(self):
         if not os.path.exists("./runs"):
             os.mkdir("./runs")
-        self.run_dir = "./runs/"+self.run_dir
+        # self.run_dir = "./runs/"+self.run_dir
         if not os.path.exists(self.run_dir):
             os.mkdir(self.run_dir)
 

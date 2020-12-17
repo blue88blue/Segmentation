@@ -14,7 +14,7 @@ from model.choose_model import seg_model
 # #################################### predict settings 预测提交结果 ####################################
 pred_data_root = '/home/sjh/dataset/PLAM/PALM-Validation400'
 pred_dir = "Atrophy"
-model_dir = "checkpoints/fold_2/CP_epoch198.pth"
+model_dir = "checkpoints//fold_1/CP_epoch250_78.4423.pth"
 # #################################### predict settings 预测提交结果 ####################################
 
 

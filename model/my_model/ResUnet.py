@@ -67,7 +67,7 @@ class ResUnet(SegBaseModel):
         if self.aux:
             auxout = self.aux_layer(c3)
             auxout = F.interpolate(auxout, size, mode='bilinear', align_corners=True)
-            outputs.update({"auxout": [auxout]})
+            outputs.update({"aux_out": [auxout]})
         return outputs
 
 

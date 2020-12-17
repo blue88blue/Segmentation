@@ -33,6 +33,7 @@ class basic_setting():
     aux = False
 
     # #################################### train settings ####################################
+    optim = "Adam"
     class_weight = [0.5, 0.5]
     OHEM = False
     num_epochs = 150

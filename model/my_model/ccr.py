@@ -10,6 +10,9 @@ from model.my_model.blocks import *
 from model.my_model.SPUnet import SPSP
 from .CaCNet import CaC_Module
 from .TANet import Tensor_Attention
+from model.my_model.Class_GCN import class_gcn_2
+
+
 
 def softmax_T(x, dim, T=1):
     x = torch.exp(x)
@@ -164,6 +167,7 @@ class EMA_UP_docoder(nn.Module):
 
 
 
+
 # class EMA_UP_docoder(nn.Module):
 #     def __init__(self, channel_h, channel_l, k=64):
 #         super().__init__()
@@ -220,6 +224,67 @@ class EMA_UP_docoder(nn.Module):
 #                 "A": similarity.view(b, -1, h, w)}
 
 
+#
+# #  残差连接
+# class EMA_UP_docoder(nn.Module):
+#     def __init__(self, channel_h, channel_l, k=64):
+#         super().__init__()
+#         self.channel = channel_h + channel_l
+#
+#         self.conv_in_h = conv_bn_relu(channel_h, channel_h, kernel_size=1, padding=0)
+#         self.conv_in_l = conv_bn_relu(channel_l, channel_l, kernel_size=1, padding=0)
+#
+#         self.em = EM(self.channel, k=k)
+#
+#         self.conv_trans_low = nn.Conv2d(self.channel, self.channel, kernel_size=1, padding=0)
+#
+#         self.pool = nn.AdaptiveAvgPool2d(1)
+#         self.conv_trans_attention = nn.Conv2d(self.channel, self.channel, kernel_size=1)
+#
+#         self.rebuild_conv = nn.Sequential(
+#                         nn.Conv2d(self.channel, channel_l, 1, bias=False),
+#                         nn.BatchNorm2d(channel_l))
+#         self.conv_out = nn.Sequential(
+#             nn.Conv2d(channel_l, channel_l, 1, bias=False),
+#             nn.BatchNorm2d(channel_l),
+#             nn.ReLU())
+#
+#     def forward(self, x_h, x_l):
+#         idn = x_l
+#
+#         # Multi-scale features fusion.
+#         x_h = self.conv_in_h(x_h)
+#         x_l = self.conv_in_l(x_l)
+#         x_h_up = F.interpolate(x_h, size=x_l.size()[-2:], mode="bilinear", align_corners=True)
+#         x_l_down = F.interpolate(x_l, size=x_h.size()[-2:], mode="bilinear", align_corners=True)
+#         m_deep = torch.cat((x_l_down, x_h), dim=1)
+#         m_low = torch.cat((x_l, x_h_up), dim=1)
+#
+#         # Holistic codebook generation.
+#         em_out = self.em(m_deep)
+#         base = em_out["mu"]
+#         x = em_out["x_trans"]
+#
+#         # Codeword assembly for high-resolution feature upsampling.
+#         m_low = self.conv_trans_low(m_low)  # (b, 1024, h/8, w/8)
+#         W = self.conv_trans_attention(m_low + self.pool(x))   # (b, 1024, h/8, w/8)
+#         b, c, h, w = W.size()
+#         W = W.view(b, c, -1).permute(0, 2, 1)  # (b, h/8*w/8, 1024)
+#         similarity = F.softmax(torch.bmm(W, base).permute(0, 2, 1), dim=1)  # (b, k, hw)
+#         m_up = torch.bmm(base, similarity).view(b, c, h, w)  #(b, c, hw)
+#         m_up = self.rebuild_conv(m_up)
+#
+#         # fusion
+#         out = self.conv_out(m_up + idn)
+#
+#         return {"out": out,
+#                 "base": base,
+#                 "A": similarity.view(b, -1, h, w)}
+
+
+
+
+
 
 
 class EM(nn.Module):
@@ -228,17 +293,19 @@ class EM(nn.Module):
         k (int): The number of the bases.
         stage_num (int): The iteration number for EM.
     '''
-    def __init__(self, c, k, stage_num=3):
+    def __init__(self, c, k, stage_num=3, inter_channel=None):
         super(EM, self).__init__()
         self.stage_num = stage_num
+        if inter_channel == None:
+            inter_channel = c
 
         # 初始化基
-        mu = torch.Tensor(1, c, k)  # k个描述子
+        mu = torch.Tensor(1, inter_channel, k)  # k个描述子
         mu.normal_(0, math.sqrt(2. / k))  # Init with Kaiming Norm.
         mu = self._l2norm(mu, dim=1)  # 归一化
         self.register_buffer('mu', mu)
 
-        self.conv1 = nn.Conv2d(c, c, 1)
+        self.conv1 = nn.Conv2d(c, inter_channel, 1)
 
         for m in self.modules():
             if isinstance(m, nn.Conv2d):
@@ -359,6 +426,85 @@ class out_conv(nn.Module):
 
 
 
+
+class CMSI(nn.Module):
+    def __init__(self, in_channel, scales):
+        super().__init__()
+        assert in_channel % 4 == 0
+        out_channel = int(in_channel / 4)
+
+        self.conv1 = conv_bn_relu(in_channel, out_channel)
+        self.conv2 = conv_bn_relu(out_channel, out_channel)
+        self.conv3 = conv_bn_relu(out_channel, out_channel)
+        self.conv4 = conv_bn_relu(out_channel, out_channel, kernel_size=1, padding=0)
+
+        self.conv2_1 = conv_bn_relu(in_channel+out_channel, out_channel)
+        self.conv2_2 = conv_bn_relu(out_channel*2, out_channel)
+        self.conv2_3 = conv_bn_relu(out_channel*2, out_channel, kernel_size=1, padding=0)
+
+        self.conv3_1 = conv_bn_relu(in_channel+out_channel, out_channel)
+        self.conv3_2 = conv_bn_relu(out_channel * 2, out_channel, kernel_size=1, padding=0)
+
+        self.conv4_1 = conv_bn_relu(in_channel + out_channel, out_channel, kernel_size=1, padding=0)
+
+        self.pool1 = nn.AdaptiveAvgPool2d((scales[0], scales[0]))
+        self.pool2 = nn.AdaptiveAvgPool2d((scales[1], scales[1]))
+        self.pool3 = nn.AdaptiveAvgPool2d((scales[2], scales[2]))
+        self.pool4 = nn.AdaptiveAvgPool2d((scales[3], scales[3]))
+
+        self.sconv1 = nn.Sequential(nn.Conv2d(in_channel, out_channel, (1, 3), 1, (0, 1), bias=False),
+                                    nn.BatchNorm2d(out_channel))
+        self.sconv2 = nn.Sequential(nn.Conv2d(in_channel, out_channel, (3, 1), 1, (1, 0), bias=False),
+                                    nn.BatchNorm2d(out_channel))
+        self.spool1 = nn.AdaptiveAvgPool2d((1, None))
+        self.spool2 = nn.AdaptiveAvgPool2d((None, 1))
+
+        self.conv_out = conv_bn_relu(in_channel*2+out_channel, in_channel)
+
+    def forward(self, x):
+        b, c, h, w = x.size()
+
+        x1 = self.conv1(self.pool1(x))
+        x2 = self.conv2(self.pool2(x1))
+        x3 = self.conv3(self.pool3(x2))
+        x4 = self.conv4(self.pool4(x3))
+
+        x2_1 = self.conv2_1(torch.cat((self.pool2(x), x2), dim=1))
+        x2_2 = self.conv2_2(torch.cat((self.pool3(x2_1), x3), dim=1))
+        x2_3 = self.conv2_3(torch.cat((self.pool4(x2_2), x4), dim=1))
+
+        x3_1 = self.conv3_1(torch.cat((self.pool3(x), x2_2), dim=1))
+        x3_2 = self.conv3_2(torch.cat((self.pool4(x3_1), x2_3), dim=1))
+
+        x4_1 = self.conv4_1(torch.cat((self.pool4(x), x3_2), dim=1))
+
+        # 上采样
+        y1 = F.interpolate(x1, size=(h, w), mode="bilinear", align_corners=True)
+        y2 = F.interpolate(x2_1, size=(h, w), mode="bilinear", align_corners=True)
+        y3 = F.interpolate(x3_1, size=(h, w), mode="bilinear", align_corners=True)
+        y4 = F.interpolate(x4_1, size=(h, w), mode="bilinear", align_corners=True)
+
+        # 条形池化
+        x5 = F.interpolate(self.sconv1(self.spool1(x)), size=(h, w), mode="bilinear", align_corners=True)
+        x6 = F.interpolate(self.sconv2(self.spool2(x)), size=(h, w), mode="bilinear", align_corners=True)
+        y5 = F.relu(x5 + x6)
+
+        # concat
+        out = torch.cat((x, y1, y2, y3, y4, y5), dim=1)
+        out = self.conv_out(out)
+
+        return out
+
+
+
+
+
+
+
+
+
+
+
 class EMUPNet(SegBaseModel):
 
     def __init__(self,  n_class, image_size=None,  backbone='resnet34', pretrained_base=False, deep_stem=False, **kwargs):
@@ -368,6 +514,8 @@ class EMUPNet(SegBaseModel):
             conv1_channel = 128
         else:
             conv1_channel = 64
+
+        # self.class_gcn = class_gcn_2(channels[3], n_class)
 
         self.donv_up1 = EMA_UP_docoder(channels[3], channels[2], k=64)
         self.donv_up2 = EMA_UP_docoder(channels[2], channels[1], k=64)
@@ -383,6 +531,9 @@ class EMUPNet(SegBaseModel):
 
         c1, c2, c3, c4, c5 = self.backbone.extract_features(x)
 
+        # aux_out, c5 = self.class_gcn(c5)
+        # aux_out = F.interpolate(aux_out, size, mode='bilinear', align_corners=True)
+        # outputs.update({"aux_out": [aux_out]})
 
         x1 = self.donv_up1(c5, c4)
 
