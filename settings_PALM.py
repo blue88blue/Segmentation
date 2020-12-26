@@ -8,7 +8,7 @@ class basic_setting():
     mode = "test"                             # train,  test,  train_test
     k_fold = 4                              # None 不交叉验证 验证集即为训练集
     start_fold = 0
-    end_fold = k_fold
+    end_fold = 4
 
     # #################################### train Data settings ####################################
     dataset_file_list = "utils/PALM_dataset_list.csv"  # 交叉验证所需文件名列表
@@ -23,7 +23,7 @@ class basic_setting():
     # #################################### model settings ####################################
     in_channel = 3
     n_class = 2
-    network = "EMUPNet"  # 模型名， 或实验名称
+    network = "DF_ResUnet"  # 模型名， 或实验名称
     note = ""  # 标签(区分不同训练设置)
     Ulikenet_channel_reduction = 2  # 类Unet模型通道衰减数(默认通道减半)
     backbone = "resnet34"  # 继承自SegBaseModel的模型backbone
@@ -47,7 +47,7 @@ class basic_setting():
     # cuda_id = "0"
 
     # #################################### test settings ####################################
-    test_run_file = "2020-1216-1749_28_EMUPNet__fold_4"
+    test_run_file = "2020-1224-1711_39_DF_ResUnet_edge_1_fold_4"
     label_names = ["bg", "atrophy"]
     plot = True  # 保存测试预测图片
 

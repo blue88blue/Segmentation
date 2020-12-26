@@ -71,9 +71,9 @@ class myDataset(Dataset):
 
 
 
-class REFUGE_PredictDataset(Dataset):
+class predict_Dataset(Dataset):
     def __init__(self, data_root, crop_size):
-        super(REFUGE_PredictDataset, self).__init__()
+        super(predict_Dataset, self).__init__()
         self.data_root = data_root
         self.crop_size = crop_size
 

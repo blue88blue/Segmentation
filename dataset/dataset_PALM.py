@@ -31,7 +31,8 @@ class myDataset(Dataset):
                 raise NotImplementedError
             print(f"{data_mode} dataset fold{num_fold}/{k_fold}: {len(self.image_files)} images")
 
-        # self.weight = torch.FloatTensor([[-1, -1, -1],[-1, 8, -1], [-1, -1, -1]]).unsqueeze(0).unsqueeze(0)
+        self.weight = torch.FloatTensor([[-1, -1, -1],[-1, 8, -1], [-1, -1, -1]]).unsqueeze(0).unsqueeze(0)
+        self.weight1 = torch.ones((1, 1, 3, 3))
 
     def __len__(self):
         return len(self.image_files)
@@ -65,12 +66,22 @@ class myDataset(Dataset):
         image, label = pad(self.crop_size, image, label)
         label = label.squeeze()
 
-        # edge_label = F.conv2d(label.unsqueeze(0).unsqueeze(0), self.weight, padding=1)
-        # edge_label = (edge_label.squeeze() > 0).float()
+        df = torch.tensor(direct_field(label.numpy()))   # （2, h, w）
+        df1 = df[0, ...].clone()
+        df2 = df[1, ...].clone()
+        df = torch.cat((df2.unsqueeze(0), df1.unsqueeze(0)), dim=0).contiguous()
+
+        edge_label = F.conv2d(label.unsqueeze(0).unsqueeze(0), self.weight, padding=1)
+        edge_label = (edge_label > 0).float()
+        for i in range(5):
+            edge_label = F.conv2d(edge_label, self.weight1, padding=1)
+            edge_label = (edge_label > 0).float()
+        edge_label = edge_label.squeeze()
         return {
             "image": image,
             "label": label,
-            # "edge_label": edge_label,
+            "df": df,
+            "edge_label": edge_label,
             "file": file}
 
 
@@ -101,3 +112,35 @@ class predict_Dataset(Dataset):
             "image": image,
             "file_name": file_name,
             "image_size": torch.tensor(image_size)}
+
+
+
+def resize_data(train_image, train_mask, size=(512, 512)):
+    train_image_resize = train_image + "_resize"
+    train_mask_resize = train_mask + "_resize"
+    if not os.path.exists(train_image_resize):
+        os.mkdir(train_image_resize)
+    if not os.path.exists(train_mask_resize):
+        os.mkdir(train_mask_resize)
+
+    # 训练集resize
+    train_image_list = sorted(os.listdir(train_image))
+    for file in train_image_list:
+        print(file)
+        file_name = os.path.splitext(file)[0]
+        image_file = os.path.join(train_image, file)
+        mask_file = os.path.join(train_mask, file_name + ".bmp")
+        image = Image.open(image_file)
+        mask = Image.open(mask_file) if os.path.exists(mask_file) else None
+
+        # if mask is not None:  # 只保存有病的图片
+        image = image.resize(size, Image.BILINEAR)
+        image.save(os.path.join(train_image_resize, file))
+        if mask is not None:
+            mask = mask.resize(size, Image.NEAREST)
+            mask.save(os.path.join(train_mask_resize, file_name + ".bmp"))
+
+
+
+
+

@@ -5,7 +5,7 @@ import numpy as np
 import PIL, PIL.ImageOps, PIL.ImageEnhance, PIL.ImageDraw, PIL.ImageFilter
 import os
 Image.MAX_IMAGE_PIXELS = None
-
+import cv2
 # 随机旋转
 def random_Rotate(img, label=None):
     rand = int(float(torch.rand(1)-0.5)*60)
@@ -176,3 +176,73 @@ def random_Left_Right_filp(image, label=None, p=0.5):
                 label = label.unsqueeze(0)
             label = torch.flip(label, [2])
     return image, label
+
+
+def direct_field(a, norm=True):
+    """ a: np.ndarray, (h, w)
+    """
+    if a.ndim == 3:
+        a = np.squeeze(a)
+
+    h, w = a.shape
+
+    a_Image = Image.fromarray(a)
+    a = a_Image.resize((w, h), Image.NEAREST)
+    a = np.array(a)
+
+    accumulation = np.zeros((2, h, w), dtype=np.float32)
+    for i in np.unique(a)[1:]:
+        # b, ind = ndimage.distance_transform_edt(a==i, return_indices=True)
+        # c = np.indices((h, w))
+        # diff = c - ind
+        # dr = np.sqrt(np.sum(diff ** 2, axis=0))
+
+        img = (a == i).astype(np.uint8)
+        dst, labels = cv2.distanceTransformWithLabels(img, cv2.DIST_L2, cv2.DIST_MASK_PRECISE,
+                                                      labelType=cv2.DIST_LABEL_PIXEL)
+        index = np.copy(labels)
+        index[img > 0] = 0
+        place = np.argwhere(index > 0)
+        nearCord = place[labels - 1, :]
+        x = nearCord[:, :, 0]
+        y = nearCord[:, :, 1]
+        nearPixel = np.zeros((2, h, w))
+        nearPixel[0, :, :] = x
+        nearPixel[1, :, :] = y
+        grid = np.indices(img.shape)
+        grid = grid.astype(float)
+        diff = grid - nearPixel
+        if norm:
+            dr = np.sqrt(np.sum(diff ** 2, axis=0))
+        else:
+            dr = np.ones_like(img)
+
+        # direction = np.zeros((2, h, w), dtype=np.float32)
+        # direction[0, b>0] = np.divide(diff[0, b>0], dr[b>0])
+        # direction[1, b>0] = np.divide(diff[1, b>0], dr[b>0])
+
+        direction = np.zeros((2, h, w), dtype=np.float32)
+        direction[0, img > 0] = np.divide(diff[0, img > 0], dr[img > 0])
+        direction[1, img > 0] = np.divide(diff[1, img > 0], dr[img > 0])
+
+        accumulation[:, img > 0] = 0
+        accumulation = accumulation + direction
+
+    # mag, angle = cv2.cartToPolar(accumulation[0, ...], accumulation[1, ...])
+    # for l in np.unique(a)[1:]:
+    #     mag_i = mag[a==l].astype(float)
+    #     t = 1 / mag_i * mag_i.max()
+    #     mag[a==l] = t
+    # x, y = cv2.polarToCart(mag, angle)
+    # accumulation = np.stack([x, y], axis=0)
+
+    return accumulation
+
+
+
+
+
+
+
+
+

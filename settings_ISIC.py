@@ -1,7 +1,9 @@
 import os
 import time
 import csv
-from dataset.dataset_ISIC import myDataset
+from dataset.dataset_ISIC import *
+
+resize_data('/media/sjh/disk1T/dataset/ISIC/ISIC2018_Task1-2_Training_Input', "/media/sjh/disk1T/dataset/ISIC/ISIC2018_Task1_Training_GroundTruth", size=(512, 384))
 
 class basic_setting():
 

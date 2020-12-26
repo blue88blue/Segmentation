@@ -12,7 +12,7 @@ if __name__ == "__main__":
     mode = "train"
     dataset = myDataset(data_root, target_root, crop_size, mode)
 
-    batch = dataset[150]
+    batch = dataset[12]
     image = batch["image"]
     label = batch["label"]
     edge_label = batch["edge_label"]

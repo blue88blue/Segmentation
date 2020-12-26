@@ -1,7 +1,7 @@
 import os
 import time
 import csv
-from dataset.dataset_REFUGE import myDataset
+from dataset.dataset_REFUGE import *
 
 class basic_setting():
 

@@ -17,6 +17,8 @@ from model.my_model.TANet import TANet
 from model.my_model.CMSINet import CMSINet
 from model.my_model.Class_GCN import class_gcn_Net
 from model.my_model.EfficientEMUPNet import EfficientEMUPNet
+from model.my_model.CG_EMUPNet import CG_EMUPNet
+from model.my_model.DF_ResUnet import DF_ResUnet
 
 def seg_model(args):
     if args.network == "Unet":
@@ -57,6 +59,10 @@ def seg_model(args):
         model = class_gcn_Net(args.n_class, args.backbone, aux=args.aux, pretrained_base=args.pretrained, dilated=args.dilated, deep_stem=args.deep_stem)
     elif args.network == "EfficientEMUPNet":
         model = EfficientEMUPNet(args.n_class, args.backbone, aux=args.aux, pretrained_base=args.pretrained, dilated=False, deep_stem=args.deep_stem)
+    elif args.network == "CG_EMUPNet":
+        model = CG_EMUPNet(args.n_class, args.crop_size, args.backbone, pretrained_base=args.pretrained,  deep_stem=args.deep_stem)
+    elif args.network == "DF_ResUnet":
+        model = DF_ResUnet(args.n_class, args.backbone, aux=args.aux, pretrained_base=args.pretrained, dilated=args.dilated, deep_stem=args.deep_stem)
     else:
         NotImplementedError("not implemented {args.network} model")
 

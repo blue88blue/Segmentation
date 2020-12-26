@@ -224,7 +224,7 @@ class EMA_UP_docoder(nn.Module):
 #                 "A": similarity.view(b, -1, h, w)}
 
 
-#
+
 # #  残差连接
 # class EMA_UP_docoder(nn.Module):
 #     def __init__(self, channel_h, channel_l, k=64):
@@ -250,7 +250,7 @@ class EMA_UP_docoder(nn.Module):
 #             nn.ReLU())
 #
 #     def forward(self, x_h, x_l):
-#         idn = x_l
+#         idn = x_l.clone()
 #
 #         # Multi-scale features fusion.
 #         x_h = self.conv_in_h(x_h)

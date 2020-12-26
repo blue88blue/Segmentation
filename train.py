@@ -16,6 +16,7 @@ from PIL import Image
 import time
 import torchsummary
 from torchvision.utils import save_image
+from utils.flow2image import flow_to_image
 # models
 from model.choose_model import seg_model
 
@@ -78,19 +79,21 @@ def train(model, device, args, num_fold=0):
     else:
         criterion = nn.CrossEntropyLoss(torch.tensor(args.class_weight, device=device))
     criterion_dice = DiceLoss()
+    criterion_df = nn.MSELoss()
+    criterion_edge = nn.MSELoss()
 
     cp_manager = utils.save_checkpoint_manager(3)
     step = 0
     for epoch in range(args.num_epochs):
         model.train()
         lr = utils.poly_learning_rate(args, opt, epoch)  # 学习率调节
-
         with tqdm(total=num_train_data, desc=f'[Train] fold[{num_fold}/{args.k_fold}] Epoch[{epoch + 1}/{args.num_epochs} LR{lr:.8f}] ', unit='img') as pbar:
             for batch in dataloader_train:
                 step += 1
                 # 读取训练数据
                 image = batch["image"]
                 label = batch["label"]
+                # print(batch["file"])
                 assert len(image.size()) == 4
                 assert len(label.size()) == 3
                 image = image.to(device, dtype=torch.float32)
@@ -105,6 +108,19 @@ def train(model, device, args, num_fold=0):
                 diceloss = criterion_dice(main_out, label)
                 celoss = criterion(main_out, label)
                 totall_loss = celoss + diceloss * args.dice_weight
+
+                if "df" in outputs.keys():
+                    df = outputs["df"]
+                    gt_df = batch["df"].to(device, dtype=torch.float32)
+                    loss_df = criterion_df(df, gt_df)
+                    totall_loss += loss_df
+
+                if "edge" in outputs.keys():
+                    edge = outputs["edge"]
+                    gt_edge = batch["edge_label"].to(device, dtype=torch.float32).unsqueeze(1)
+                    loss_edge = criterion_edge(edge, gt_edge)
+                    totall_loss += loss_edge
+
                 if "sim_loss" in outputs.keys():
                     totall_loss += outputs["sim_loss"]*0.2
                 if "aux_out" in outputs.keys():  # 计算辅助损失函数
@@ -146,6 +162,10 @@ def train(model, device, args, num_fold=0):
                         writer.add_scalar("Train/aux_losses",aux_losses, step)
                     if "sim_loss" in outputs.keys():
                         writer.add_scalar("Train/sim_loss", outputs["sim_loss"], step)
+                    if "df" in outputs.keys():
+                        writer.add_scalar("Train/df_loss", loss_df, step)
+                    if "edge" in outputs.keys():
+                        writer.add_scalar("Train/edge_loss", loss_edge, step)
                     writer.add_scalar("Train/Totall_loss", totall_loss.item(), step)
 
                 pbar.set_postfix(**{'loss': totall_loss.item()})  # 显示loss
@@ -283,27 +303,27 @@ def test(model, device, args, num_fold=0):
                         # save_image(pred[b,:,:].cpu().float().unsqueeze(0), os.path.join(args.plot_save_dir, file_name + f"_pred_{dice.mean():.2f}.png"), normalize=True)
                         # save_image(image[b,:,:].cpu(), os.path.join(args.plot_save_dir, file[b]))
                         # save_image(label[b,:,:].cpu().float().unsqueeze(0), os.path.join(args.plot_save_dir, file_name + f"_label.png"), normalize=True)
-                        if "A4" in outputs.keys():
-                            for i in range(0, 25, 5):
-                                proj_map = F.interpolate(outputs["A1"][b, ...].unsqueeze(0), size=image.size()[-2:],
-                                                      mode="bilinear", align_corners=True).squeeze(0)
-                                save_image(proj_map[i, :, :], os.path.join(args.plot_save_dir, file_name + f"_A1_{i}.png"),
-                                           normalize=True)
-                            for i in range(0, 25, 5):
-                                proj_map = F.interpolate(outputs["A2"][b, ...].unsqueeze(0), size=image.size()[-2:],
-                                                      mode="bilinear", align_corners=True).squeeze(0)
-                                save_image(proj_map[i, :, :], os.path.join(args.plot_save_dir, file_name + f"_A2_{i}.png"),
-                                           normalize=True)
-                            for i in range(0, 25, 5):
-                                proj_map = F.interpolate(outputs["A3"][b, ...].unsqueeze(0), size=image.size()[-2:],
-                                                      mode="bilinear", align_corners=True).squeeze(0)
-                                save_image(proj_map[i, :, :], os.path.join(args.plot_save_dir, file_name + f"_A3_{i}.png"),
-                                           normalize=True)
-                            for i in range(0, 25, 5):
-                                proj_map = F.interpolate(outputs["A4"][b, ...].unsqueeze(0), size=image.size()[-2:],
-                                                      mode="bilinear", align_corners=True).squeeze(0)
-                                save_image(proj_map[i, :, :], os.path.join(args.plot_save_dir, file_name + f"_A4_{i}.png"),
-                                           normalize=True)
+                        # if "A4" in outputs.keys():
+                        #     for i in range(0, 25, 5):
+                        #         proj_map = F.interpolate(outputs["A1"][b, ...].unsqueeze(0), size=image.size()[-2:],
+                        #                               mode="bilinear", align_corners=True).squeeze(0)
+                        #         save_image(proj_map[i, :, :], os.path.join(args.plot_save_dir, file_name + f"_A1_{i}.png"),
+                        #                    normalize=True)
+                        #     for i in range(0, 25, 5):
+                        #         proj_map = F.interpolate(outputs["A2"][b, ...].unsqueeze(0), size=image.size()[-2:],
+                        #                               mode="bilinear", align_corners=True).squeeze(0)
+                        #         save_image(proj_map[i, :, :], os.path.join(args.plot_save_dir, file_name + f"_A2_{i}.png"),
+                        #                    normalize=True)
+                        #     for i in range(0, 25, 5):
+                        #         proj_map = F.interpolate(outputs["A3"][b, ...].unsqueeze(0), size=image.size()[-2:],
+                        #                               mode="bilinear", align_corners=True).squeeze(0)
+                        #         save_image(proj_map[i, :, :], os.path.join(args.plot_save_dir, file_name + f"_A3_{i}.png"),
+                        #                    normalize=True)
+                        #     for i in range(0, 25, 5):
+                        #         proj_map = F.interpolate(outputs["A4"][b, ...].unsqueeze(0), size=image.size()[-2:],
+                        #                               mode="bilinear", align_corners=True).squeeze(0)
+                        #         save_image(proj_map[i, :, :], os.path.join(args.plot_save_dir, file_name + f"_A4_{i}.png"),
+                        #                    normalize=True)
                         # if "x_proj_1" in outputs.keys():
                         #     for i in range(7):
                         #         proj_map = F.interpolate(outputs["x_proj_1"][b, ...].unsqueeze(0), size=image.size()[-2:],
@@ -315,6 +335,14 @@ def test(model, device, args, num_fold=0):
                         #                               mode="bilinear", align_corners=True).squeeze(0)
                         #         save_image(proj_map[i, :, :], os.path.join(args.plot_save_dir, file_name + f"_A2_{i}.png"),
                         #                    normalize=True)
+                        if "df" in outputs.keys():
+                            df = outputs["df"][b].cpu().permute(1, 2, 0).numpy()
+                            df_image = flow_to_image(df)
+                            df_image = Image.fromarray(df_image)
+                            df_image.save(os.path.join(args.plot_save_dir, file_name + f"_df.png"))
+                        if "edge" in outputs.keys():
+                            edge = outputs["edge"][b].cpu()
+                            save_image(edge, os.path.join(args.plot_save_dir, file_name + f"_edge.png"))
                         save_image(image[b, :, :].cpu(), os.path.join(args.plot_save_dir, file[b]))
                         pred_image = pred[b, :, :].unsqueeze(0)
                         true_mask = label[b, :, :].unsqueeze(0)

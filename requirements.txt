@@ -1,0 +1,7 @@
+pillow
+numpy
+tqdm
+SimpleITK
+h5py
+tensorboard
+torchsummary
