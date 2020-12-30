@@ -37,7 +37,7 @@ class BinaryDiceLoss(nn.Module):
 
 
 class DiceLoss(nn.Module):
-    def __init__(self, ignore_index=0, **kwargs):
+    def __init__(self, ignore_index=None, **kwargs):
         super(DiceLoss, self).__init__()
         self.kwargs = kwargs
         self.ignore_index = ignore_index

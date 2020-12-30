@@ -2,6 +2,12 @@ from torch.utils.data import Dataset
 import csv
 from .transform import*
 
+# # no zero
+# mean = torch.Tensor(np.array([0.33431788, 0.18007372, 0.08471605]))
+# std = torch.Tensor(np.array([0.14999308, 0.08319784, 0.04115211]))
+
+mean = torch.Tensor(np.array([0.26870813, 0.14467042, 0.06797291]))
+std = torch.Tensor(np.array([0.19108582, 0.10590834, 0.05120334]))
 
 
 class myDataset(Dataset):
@@ -51,7 +57,7 @@ class myDataset(Dataset):
         if self.data_mode == "train":  # 数据增强
             image, label = random_transfrom(image, label)
 
-        image, label = convert_to_tensor(image, label)
+        image, label = convert_to_tensor(image, label, mean, std)
 
         # -------标签处理-------
         label = (label == 255).float()
@@ -66,22 +72,22 @@ class myDataset(Dataset):
         image, label = pad(self.crop_size, image, label)
         label = label.squeeze()
 
-        df = torch.tensor(direct_field(label.numpy()))   # （2, h, w）
-        df1 = df[0, ...].clone()
-        df2 = df[1, ...].clone()
-        df = torch.cat((df2.unsqueeze(0), df1.unsqueeze(0)), dim=0).contiguous()
-
-        edge_label = F.conv2d(label.unsqueeze(0).unsqueeze(0), self.weight, padding=1)
-        edge_label = (edge_label > 0).float()
-        for i in range(5):
-            edge_label = F.conv2d(edge_label, self.weight1, padding=1)
-            edge_label = (edge_label > 0).float()
-        edge_label = edge_label.squeeze()
+        # df = torch.tensor(direct_field(label.numpy()))   # （2, h, w）
+        # df1 = df[0, ...].clone()
+        # df2 = df[1, ...].clone()
+        # df = torch.cat((df2.unsqueeze(0), df1.unsqueeze(0)), dim=0).contiguous()
+        #
+        # edge_label = F.conv2d(label.unsqueeze(0).unsqueeze(0), self.weight, padding=1)
+        # edge_label = (edge_label > 0).float()
+        # for i in range(5):
+        #     edge_label = F.conv2d(edge_label, self.weight1, padding=1)
+        #     edge_label = (edge_label > 0).float()
+        # edge_label = edge_label.squeeze()
         return {
             "image": image,
             "label": label,
-            "df": df,
-            "edge_label": edge_label,
+            # "df": df,
+            # "edge_label": edge_label,
             "file": file}
 
 
@@ -89,6 +95,8 @@ class myDataset(Dataset):
 class predict_Dataset(Dataset):
     def __init__(self, data_root, crop_size):
         super(predict_Dataset, self).__init__()
+        self.mean = mean
+        self.std = std
         self.data_root = data_root
         self.crop_size = crop_size
 
@@ -104,7 +112,7 @@ class predict_Dataset(Dataset):
 
         image, _ = fetch(image_path)
         image_size = image.size  # w,h
-        image, _ = convert_to_tensor(image)
+        image, _ = convert_to_tensor(image, mean=mean, std=std)
         image, _ = scale_adaptive(self.crop_size, image)
         image, _ = pad(self.crop_size, image)
 

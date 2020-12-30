@@ -17,14 +17,14 @@ class basic_setting():
     crop_size = (320, 320)
 
     # #################################### train file settings ####################################
-    run_dir = "/media/sjh/disk1T/REFUGE"                      # 数据集名称
+    run_dir = "/media/sjh/disk1T/RUNS/REFUGE"                      # 数据集名称
     val_step = 2                          # 每训练几个epoch进行一次验证
 
     # #################################### model settings ####################################
     in_channel = 3
     n_class = 3
     network = "ResUnet"  # 模型名， 或实验名称
-    note = ""  # 标签(区分不同训练设置)
+    note = "label400"  # 标签(区分不同训练设置)
     Ulikenet_channel_reduction = 2  # 类Unet模型通道衰减数(默认通道减半)
     backbone = "resnet34"  # 继承自SegBaseModel的模型backbone
     pretrained = True

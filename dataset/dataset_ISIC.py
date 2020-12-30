@@ -5,6 +5,10 @@ from PIL import Image
 from .transform import*
 
 
+mean = torch.Tensor(np.array([0.7085446,  0.58216874, 0.53626412]))
+std = torch.Tensor(np.array([0.09625552, 0.11072131, 0.12459033]))
+
+
 class myDataset(Dataset):
     def __init__(self, data_root, target_root, crop_size, data_mode, k_fold=None, imagefile_csv=None, num_fold=None):
         self.crop_size = crop_size  # h, w
@@ -24,7 +28,7 @@ class myDataset(Dataset):
             fold = num_fold - 1
             if data_mode == "train":
                 self.image_files = image_files[0: fold*fold_size] + image_files[fold*fold_size+fold_size:]
-                self.image_files = self.image_files[:200]
+                # self.image_files = self.image_files[:200]
             elif data_mode == "val" or data_mode == "test":
                 self.image_files = image_files[fold*fold_size: fold*fold_size+fold_size]
             else:
@@ -47,7 +51,7 @@ class myDataset(Dataset):
             image = random_Contrast(image)
             image = random_Brightness(image)
 
-        image, label = convert_to_tensor(image, label)
+        image, label = convert_to_tensor(image, label, mean=mean, std=std)
         # -------标签处理-------
         label = (label >= 128).float()
         # -------标签处理-------

@@ -5,7 +5,7 @@ from dataset.dataset_PALM import *
 
 class basic_setting():
 
-    mode = "test"                             # train,  test,  train_test
+    mode = "train_test"                             # train,  test,  train_test
     k_fold = 4                              # None 不交叉验证 验证集即为训练集
     start_fold = 0
     end_fold = 4
@@ -23,14 +23,14 @@ class basic_setting():
     # #################################### model settings ####################################
     in_channel = 3
     n_class = 2
-    network = "DF_ResUnet"  # 模型名， 或实验名称
+    network = "BiNet"  # 模型名， 或实验名称
     note = ""  # 标签(区分不同训练设置)
     Ulikenet_channel_reduction = 2  # 类Unet模型通道衰减数(默认通道减半)
     backbone = "resnet34"  # 继承自SegBaseModel的模型backbone
     pretrained = True
     dilated = False
     deep_stem = False
-    aux = False
+    aux = True
 
     # #################################### train settings ####################################
     optim = "Adam"
@@ -40,7 +40,7 @@ class basic_setting():
     batch_size = 4
     num_workers = 8
     aux_weight = 0.25
-    dice_weight = 0.5
+    dice_weight = 1.0
     lr = 0.0001
     momentum = 0.9
     weight_decay = 1e-4

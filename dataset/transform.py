@@ -72,8 +72,9 @@ def fetch(image_path, label_path=None):
     return image, label
 
 # image转为tensor
-def convert_to_tensor(image, label=None):
+def convert_to_tensor(image, label=None, mean=0.5, std=0.5):
     image = torch.FloatTensor(np.array(image)) / 255
+    image = (image - mean) / std
     # image = image - torch.Tensor(np.array([0.5, 0.5, 0.5]))
     if len(image.size()) == 2:
         image = image.unsqueeze(0)
@@ -148,7 +149,7 @@ def pad(crop_size, image, label=None, pad_value=0.0):
     pad_h = max(crop_size[0] - h, 0)
     pad_w = max(crop_size[1] - w, 0)
     if pad_h > 0 or pad_w > 0:
-        image = F.pad(image, (0, pad_w, 0, pad_h), mode='constant', value=pad_value)
+        image = F.pad(image, (0, pad_w, 0, pad_h), mode='constant', value=image.min())
         if label is not None:
             label = F.pad(label, (0, pad_w, 0, pad_h), mode='constant', value=pad_value)
     return image, label

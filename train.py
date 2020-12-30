@@ -78,7 +78,7 @@ def train(model, device, args, num_fold=0):
         criterion = OhemCrossEntropy(thres=0.8, min_kept=10000)
     else:
         criterion = nn.CrossEntropyLoss(torch.tensor(args.class_weight, device=device))
-    criterion_dice = DiceLoss()
+    criterion_dice = DiceLoss(ignore_index=0)
     criterion_df = nn.MSELoss()
     criterion_edge = nn.MSELoss()
 
@@ -128,7 +128,6 @@ def train(model, device, args, num_fold=0):
                     for aux_p in outputs["aux_out"]:
                         auxloss = (criterion(aux_p, label) + criterion_dice(aux_p, label) * args.dice_weight) * args.aux_weight
                         totall_loss += auxloss
-                        aux_losses += auxloss
 
                 if "mu" in outputs.keys():  # EMAU 的基更新
                     with torch.no_grad():
@@ -139,6 +138,7 @@ def train(model, device, args, num_fold=0):
                         # model.emau.mu += mu * (1 - momentum)
                         model.effcient_module.em.mu *= momentum
                         model.effcient_module.em.mu += mu * (1 - momentum)
+
                 if "mu1" in outputs.keys():
                     with torch.no_grad():
                         mu1 = outputs['mu1'].mean(dim=0, keepdim=True)

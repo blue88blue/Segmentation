@@ -15,11 +15,11 @@ if __name__ == "__main__":
     batch = dataset[12]
     image = batch["image"]
     label = batch["label"]
-    edge_label = batch["edge_label"]
+    # edge_label = batch["edge_label"]
 
     save_image(image, "image.jpg")
     save_image(label, "label.png", normalize=True)
-    save_image(edge_label, "edge_label.png", normalize=True)
+    # save_image(edge_label, "edge_label.png", normalize=True)
 
     print(batch["file"])
     print(image.size())

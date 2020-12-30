@@ -181,6 +181,12 @@ class class_gcn_2(nn.Module):
         self.st2 = squeeze_and_expand(in_channel, self.node, inter_channel)
         self.gcn = GCN(inter_channel, int(self.node*2))
 
+        for m in self.modules():
+            if isinstance(m, nn.Conv2d):
+                init_weights(m, init_type='kaiming')
+            elif isinstance(m, nn.BatchNorm2d):
+                init_weights(m, init_type='kaiming')
+
     def forward(self, x, aux_pred=None):
         idn = x
         aux_out = None
@@ -204,6 +210,7 @@ class class_gcn_2(nn.Module):
         return {"aux_out": aux_out,
                 "out": out,
                 "aux_pred": aux_pred}
+
 
 
 class class_gcn_3(nn.Module):

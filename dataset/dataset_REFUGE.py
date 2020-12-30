@@ -5,6 +5,10 @@ import csv
 from .transform import*
 import numpy as np
 
+mean = torch.Tensor(np.array([0.64693393, 0.43469778, 0.3104463]))
+std = torch.Tensor(np.array([0.17620728, 0.1501657,  0.10175041]))
+
+
 
 class myDataset(Dataset):
     def __init__(self, data_root, target_root, crop_size, data_mode, k_fold=None, imagefile_csv=None, num_fold=None):
@@ -26,6 +30,7 @@ class myDataset(Dataset):
             fold = num_fold - 1
             if data_mode == "train":
                 self.image_files = image_files[0: fold*fold_size] + image_files[fold*fold_size+fold_size:]
+                self.image_files = self.image_files[:400]
             elif data_mode == "val" or data_mode == "test":
                 self.image_files = image_files[fold*fold_size: fold*fold_size+fold_size]
             else:
@@ -49,7 +54,7 @@ class myDataset(Dataset):
             image = random_Brightness(image)
             image = random_GaussianBlur(image)
 
-        image, label = convert_to_tensor(image, label)
+        image, label = convert_to_tensor(image, label, mean, std)
         # -------标签处理-------
         label_bg = (label == 255).float()
         label_disc = (label == 128).float()
@@ -90,9 +95,10 @@ class predict_Dataset(Dataset):
 
         image, _ = fetch(image_path)
         image_size = image.size  # w,h
-        image, _ = convert_to_tensor(image)
+        image, _ = convert_to_tensor(image, mean, std)
         image, _ = resize(self.crop_size, image)
 
         return {
             "image": image,
-            "file_name": file_name}
+            "file_name": file_name,
+            "image_size": torch.tensor(image_size)}
