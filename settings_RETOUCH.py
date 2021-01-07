@@ -2,28 +2,28 @@ import os
 import time
 import csv
 import shutil
-from dataset.dataset_COVID19 import *
+from dataset.dataset_RETOUCH import *
 
 class basic_setting():
 
     mode = "train_test"                             # train,  test,  train_test
-    k_fold = 6                              # None 不交叉验证 验证集即为训练集
+    k_fold = 3                              # None 不交叉验证 验证集即为训练集
     start_fold = 0
-    end_fold = 1
+    end_fold = k_fold
 
     # #################################### train Data settings ####################################
-    dataset_file_list = "utils/COVID19_dataset_list.csv"  # 交叉验证所需文件名列表
-    data_root = '/media/sjh/disk1T/dataset/COVID-19-20_v2/train_slices_positive/image'
-    target_root = "/media/sjh/disk1T/dataset/COVID-19-20_v2/train_slices_positive/label"  # 标签
-    crop_size = (256, 256)
+    dataset_file_list = "utils/RETUCH_dataset_list.csv"  # 交叉验证所需文件名列表
+    data_root = '/media/sjh/disk1T/dataset/RETOUCH_crop/train_all/img'
+    target_root = "/media/sjh/disk1T/dataset/RETOUCH_crop/train_all/mask"  # 萎缩标签
+    crop_size = (512, 448)
 
     # #################################### train file settings ####################################
-    run_dir = "/media/sjh/disk1T/COVID19"                      # 数据集名称
-    val_step = 2                          # 每训练几个epoch进行一次验证
+    run_dir = "/media/sjh/disk1T/RUNS/RETOUCH"                      # 数据集名称
+    val_step = 1                          # 每训练几个epoch进行一次验证
 
     # #################################### model settings ####################################
     in_channel = 3
-    n_class = 2
+    n_class = 4
     network = "Unet"  # 模型名， 或实验名称
     note = ""  # 标签(区分不同训练设置)
     Ulikenet_channel_reduction = 2  # 类Unet模型通道衰减数(默认通道减半)
@@ -34,28 +34,29 @@ class basic_setting():
     aux = False
 
     # #################################### train settings ####################################
+    test_3D = True
     optim = "Adam"
-    class_weight = [0.5, 0.5]
+    class_weight = [0.25, 0.25, 0.25, 0.25]
     OHEM = False
-    num_epochs = 150
+    num_epochs = 100
     batch_size = 8
-    num_workers = 8
-    aux_weight = 0.5
-    dice_weight = 1
-    lr = 0.001
+    num_workers = 16
+    aux_weight = 0.25
+    dice_weight = 1.0
+    lr = 0.0001
     momentum = 0.9
     weight_decay = 1e-4
     # cuda_id = "0"
 
     # #################################### test settings ####################################
-    test_run_file = "2020-1107-1429_45_Unet__fold_6"
-    label_names = ["bg", "COVID19"]
+    test_run_file = "2021-0103-2146_34_channel_gcn_Net__fold_4_82.00"
+    label_names = ["bg", "0", "1", "2"]
     plot = True  # 保存测试预测图片
 
 
     def __init__(self):
-        if not os.path.exists("./runs"):
-            os.mkdir("./runs")
+        # if not os.path.exists("./runs"):
+        #     os.mkdir("./runs")
         # self.run_dir = "./runs/"+self.run_dir
         if not os.path.exists(self.run_dir):
             os.mkdir(self.run_dir)
@@ -93,6 +94,7 @@ class basic_setting():
                     self.log_dir.append(log_i_dir)
             shutil.copytree('.', os.path.join(self.dir, "code"), shutil.ignore_patterns(['.git', '__pycache__']))
 
+
         if self.mode == "test" or self.mode == "train_test":
             if self.mode == "test":
                 self.dir = os.path.join(self.run_dir, self.test_run_file)
@@ -121,7 +123,6 @@ class basic_setting():
                 self.plot_save_dir = os.path.join(self.dir, "test_images")
                 if not os.path.exists(self.plot_save_dir):
                     os.mkdir(self.plot_save_dir)
-
 
     # 记录训练参数与信息
     def logger(self, file):

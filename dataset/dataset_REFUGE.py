@@ -30,7 +30,7 @@ class myDataset(Dataset):
             fold = num_fold - 1
             if data_mode == "train":
                 self.image_files = image_files[0: fold*fold_size] + image_files[fold*fold_size+fold_size:]
-                self.image_files = self.image_files[:400]
+                # self.image_files = self.image_files[:400]
             elif data_mode == "val" or data_mode == "test":
                 self.image_files = image_files[fold*fold_size: fold*fold_size+fold_size]
             else:
@@ -47,6 +47,7 @@ class myDataset(Dataset):
         image_path = os.path.join(self.data_root, file)
         label_path = os.path.join(self.target_root, file_name+".bmp")
         image, label = fetch(image_path, label_path)
+        image_size = image.size
 
         if self.data_mode == "train":  # 数据增强
             image = random_Color(image)
@@ -61,19 +62,32 @@ class myDataset(Dataset):
         label_cup = (label == 0).float()
         label = torch.cat((label_bg, label_disc, label_cup), dim=0).max(dim=0, keepdim=True)[1].float()
         # -------标签处理-------
+        if self.data_mode == "test":
+            image, _ = resize(self.crop_size, image)
+        else:
+            image, label = resize(self.crop_size, image, label)
 
         if self.data_mode == "train":  # 数据增强
             image, label = random_Top_Bottom_filp(image, label)
             image, label = random_Left_Right_filp(image, label)
 
-        image, label = resize(self.crop_size, image, label)
         label = label.squeeze()
 
         return {
             "image": image,
             "label": label,
-            "file": file}
+            "file": file,
+            "image_size": torch.tensor((image_size[1], image_size[0]))}
 
+    @classmethod
+    def recover_image(self, image, image_size, crop_size=None):
+        assert len(image.size()) == 3
+
+        image = F.interpolate(image.unsqueeze(), size=(image_size[0], image_size[1]), mode="bilinear",
+                              align_corners=True)
+        image = image.squeeze(0)
+
+        return image
 
 
 class predict_Dataset(Dataset):
@@ -101,4 +115,4 @@ class predict_Dataset(Dataset):
         return {
             "image": image,
             "file_name": file_name,
-            "image_size": torch.tensor(image_size)}
+            "image_size": torch.tensor((image_size[1], image_size[0]))}

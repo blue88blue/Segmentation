@@ -21,6 +21,7 @@ from model.my_model.CG_EMUPNet import CG_EMUPNet
 from model.my_model.DF_ResUnet import DF_ResUnet
 from model.my_model.GloRe import GloRe_Net
 from model.my_model.BiNet import BiNet, BiNet_baseline
+from model.my_model.channel_GCN import channel_gcn_Net
 
 def seg_model(args):
     if args.network == "Unet":
@@ -71,6 +72,8 @@ def seg_model(args):
         model = BiNet(args.n_class, args.backbone, aux=args.aux, pretrained_base=args.pretrained, dilated=args.dilated, deep_stem=args.deep_stem)
     elif args.network == "BiNet_baseline":
         model = BiNet_baseline(args.n_class, args.backbone, aux=args.aux, pretrained_base=args.pretrained, dilated=args.dilated, deep_stem=args.deep_stem)
+    elif args.network == "channel_gcn_Net":
+        model = channel_gcn_Net(args.n_class, args.backbone, aux=args.aux, pretrained_base=args.pretrained, dilated=args.dilated, deep_stem=args.deep_stem)
     else:
         NotImplementedError("not implemented {args.network} model")
 

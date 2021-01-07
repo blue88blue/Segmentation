@@ -51,8 +51,14 @@ class myDataset(Dataset):
         label_path = os.path.join(self.target_root, file_name+".bmp")
 
         image, label = fetch(image_path, label_path)
+        image_size = image.size
         if label == None:
             label = Image.new("L", image.size, 0)
+
+        # if self.data_mode == "test":
+        #     image, _ = scale_adaptive_PIL(self.crop_size, image)
+        # else:
+        #     image, label = scale_adaptive_PIL(self.crop_size, image, label)
 
         if self.data_mode == "train":  # 数据增强
             image, label = random_transfrom(image, label)
@@ -63,13 +69,17 @@ class myDataset(Dataset):
         label = (label == 255).float()
         # -------标签处理-------
 
-        image, label = scale_adaptive(self.crop_size, image, label)
+        # if self.data_mode == "test":
+        #     image, _ = scale_adaptive(self.crop_size, image)
+        #     image, _ = pad(self.crop_size, image)
+        # else:
+        #     image, label = scale_adaptive(self.crop_size, image, label)
+        #     image, label = pad(self.crop_size, image, label)
 
         if self.data_mode == "train":  # 数据增强
             image, label = random_Top_Bottom_filp(image, label)
             image, label = random_Left_Right_filp(image, label)
 
-        image, label = pad(self.crop_size, image, label)
         label = label.squeeze()
 
         # df = torch.tensor(direct_field(label.numpy()))   # （2, h, w）
@@ -88,7 +98,26 @@ class myDataset(Dataset):
             "label": label,
             # "df": df,
             # "edge_label": edge_label,
-            "file": file}
+            "file": file,
+            "image_size": torch.tensor((image_size[1], image_size[0]))}
+
+    @classmethod
+    def recover_image(self, image, image_size, crop_size=None):
+        assert len(image.size()) == 3
+
+        ratio_h = crop_size[0] / float(image_size[0])  # 高度比例
+        ratio_w = crop_size[1] / float(image_size[1])  # 宽度比例
+        ratio = min(ratio_h, ratio_w)
+        h = int(image_size[0] * ratio)
+        w = int(image_size[1] * ratio)
+        # 裁剪去掉pad
+        image_crop = image[:, 0:h, 0:w].unsqueeze(0)
+        image = F.interpolate(image_crop, size=(image_size[0], image_size[1]), mode="bilinear", align_corners=True)
+        image = image.squeeze(0)
+
+        return image
+
+
 
 
 
@@ -112,14 +141,27 @@ class predict_Dataset(Dataset):
 
         image, _ = fetch(image_path)
         image_size = image.size  # w,h
+
+        image = image.resize((self.crop_size[1], self.crop_size[0]),  Image.BILINEAR)
         image, _ = convert_to_tensor(image, mean=mean, std=std)
-        image, _ = scale_adaptive(self.crop_size, image)
-        image, _ = pad(self.crop_size, image)
+        # image, _ = scale_adaptive(self.crop_size, image)
+        # image, _ = pad(self.crop_size, image)
+
 
         return {
             "image": image,
             "file_name": file_name,
-            "image_size": torch.tensor(image_size)}
+            "image_size": torch.tensor((image_size[1], image_size[0]))}
+
+
+
+
+
+
+
+
+
+
 
 
 

@@ -40,7 +40,30 @@ class BiNet(nn.Module):
         return outputs
 
 
-
+# class BiNet(nn.Module):
+#
+#     def __init__(self, n_class, backbone='resnet34', aux=False, inchannel=3,  pretrained_base=False, **kwargs):
+#         super().__init__()
+#         self.aux = aux
+#         self.detail_branch = Detail_Branch(inchannel, 128)
+#         self.sematic_branch = Semantic_Branch(n_class, aux=False, backbone=backbone, pretrained_base=pretrained_base, **kwargs)
+#
+#         self.cg = class_gcn_2(self.sematic_branch.base_channel[-1]+128, n_class)
+#
+#         self.out_conv = out_conv(128 + self.sematic_branch.base_channel[-1], n_class)
+#
+#
+#     def forward(self, x):
+#         outputs = dict()
+#         x_detail = self.detail_branch(x)
+#         x_sematic = self.sematic_branch(x)["main_out"]
+#
+#         x_sematic_up = F.interpolate(x_sematic, size=x_detail.size()[-2:], mode="bilinear", align_corners=True)
+#         main_out = self.out_conv(torch.cat((x_sematic_up, x_detail), dim=1))
+#         main_out = F.interpolate(main_out, size=x.size()[-2:], mode="bilinear", align_corners=True)
+#
+#         outputs.update({"main_out": main_out})
+#         return outputs
 
 class BiNet_baseline(nn.Module):
 
@@ -70,9 +93,6 @@ class BiNet_baseline(nn.Module):
 
 
 
-
-
-
 class EMA_UP_docoder_EM_x(nn.Module):
     def __init__(self, channel_h, channel_l, n_class, k=64):
         super().__init__()
@@ -83,20 +103,23 @@ class EMA_UP_docoder_EM_x(nn.Module):
 
         self.em = EM(self.channel, k=k)
 
-        self.conv_trans_low = nn.Conv2d(self.channel, self.channel, kernel_size=1, padding=0)
+        self.conv_trans_low = nn.Sequential(
+                        nn.Conv2d(self.channel, self.channel, 3, bias=False, padding=1),
+                        nn.BatchNorm2d(self.channel))
 
         self.pool = nn.AdaptiveAvgPool2d(1)
         self.conv_trans_attention = nn.Conv2d(self.channel, self.channel, kernel_size=1)
 
         self.rebuild_conv = nn.Sequential(
                         nn.Conv2d(self.channel, self.channel, 1, bias=False),
-                        nn.BatchNorm2d(self.channel),
-                        nn.ReLU())
+                        nn.BatchNorm2d(self.channel))
 
         self.conv_out = nn.Sequential(
-                        nn.Conv2d(self.channel*2, self.channel, kernel_size=3, bias=False),
+                        nn.Conv2d(self.channel, self.channel, kernel_size=3, bias=False, padding=1),
                         nn.BatchNorm2d(self.channel),
+                        nn.ReLU(),
                         nn.Conv2d(self.channel, n_class, kernel_size=1))
+        self.relu = nn.ReLU(inplace=True)
 
         for m in self.modules():
             if isinstance(m, nn.Conv2d):
@@ -117,23 +140,84 @@ class EMA_UP_docoder_EM_x(nn.Module):
         # Holistic codebook generation.
         em_out = self.em(m_deep)
         base = em_out["mu"]
-        x = em_out["x_trans"]
+        # x = em_out["x_trans"]
 
         # Codeword assembly for high-resolution feature upsampling.
-        m_low = self.conv_trans_low(m_low)  # (b, 1024, h/8, w/8)
-        W = self.conv_trans_attention(m_low + self.pool(x))   # (b, 1024, h/8, w/8)
+        W = self.conv_trans_attention(m_low)   # (b, 1024, h/8, w/8)
         b, c, h, w = W.size()
         W = W.view(b, c, -1).permute(0, 2, 1)  # (b, h/8*w/8, 1024)
         similarity = F.softmax(torch.bmm(W, base).permute(0, 2, 1), dim=1)  # (b, k, hw)
         m_up = torch.bmm(base, similarity).view(b, c, h, w)  #(b, c, hw)
         m_up = self.rebuild_conv(m_up)
 
-        f = torch.cat((m_up, m_low), dim=1)
-        out = self.conv_out(f)
+        m_low_cat = self.conv_trans_low(m_low)  # (b, 1024, h/8, w/8)
+        out = self.conv_out(self.relu(m_up+m_low_cat))
 
         return {"out": out,
-                "base": base,
-                "A": similarity.view(b, -1, h, w)}
+                "base": base}
+
+
+# class EMA_UP_docoder_EM_x(nn.Module):
+#     def __init__(self, channel_h, channel_l, n_class, k=64):
+#         super().__init__()
+#         self.channel = channel_h + channel_l
+#
+#         # self.conv_in_h = conv_bn_relu(channel_h, channel_h, kernel_size=1, padding=0)
+#         # self.conv_in_l = conv_bn_relu(channel_l, channel_l, kernel_size=1, padding=0)
+#
+#         self.em = EM(self.channel, k=k)
+#
+#         self.conv_trans_low = nn.Conv2d(self.channel, self.channel, kernel_size=1, padding=0)
+#
+#         self.pool = nn.AdaptiveAvgPool2d(1)
+#         self.conv_trans_attention = nn.Conv2d(self.channel, self.channel, kernel_size=1)
+#
+#         self.rebuild_conv = nn.Sequential(
+#                         nn.Conv2d(self.channel, self.channel, 1, bias=False),
+#                         nn.BatchNorm2d(self.channel),
+#                         nn.ReLU())
+#
+#         self.conv_out = nn.Sequential(
+#                         nn.Conv2d(self.channel*2, self.channel, kernel_size=3, bias=False),
+#                         nn.BatchNorm2d(self.channel),
+#                         nn.Conv2d(self.channel, n_class, kernel_size=1))
+#
+#         for m in self.modules():
+#             if isinstance(m, nn.Conv2d):
+#                 torch.nn.init.kaiming_normal_(m.weight)
+#             elif isinstance(m, nn.BatchNorm2d):
+#                 m.weight.data.fill_(1)
+#                 m.bias.data.zero_()
+#
+#     def forward(self, x_h, x_l):
+#         # Multi-scale features fusion.
+#         # x_h = self.conv_in_h(x_h)
+#         # x_l = self.conv_in_l(x_l)
+#         x_h_up = F.interpolate(x_h, size=x_l.size()[-2:], mode="bilinear", align_corners=True)
+#         x_l_down = F.interpolate(x_l, size=x_h.size()[-2:], mode="bilinear", align_corners=True)
+#         m_deep = torch.cat((x_l_down, x_h), dim=1)
+#         m_low = torch.cat((x_l, x_h_up), dim=1)
+#
+#         # Holistic codebook generation.
+#         em_out = self.em(m_deep)
+#         base = em_out["mu"]
+#         x = em_out["x_trans"]
+#
+#         # Codeword assembly for high-resolution feature upsampling.
+#         m_low = self.conv_trans_low(m_low)  # (b, 1024, h/8, w/8)
+#         W = self.conv_trans_attention(m_low + self.pool(x))   # (b, 1024, h/8, w/8)
+#         b, c, h, w = W.size()
+#         W = W.view(b, c, -1).permute(0, 2, 1)  # (b, h/8*w/8, 1024)
+#         similarity = F.softmax(torch.bmm(W, base).permute(0, 2, 1), dim=1)  # (b, k, hw)
+#         m_up = torch.bmm(base, similarity).view(b, c, h, w)  #(b, c, hw)
+#         m_up = self.rebuild_conv(m_up)
+#
+#         f = torch.cat((m_up, m_low), dim=1)
+#         out = self.conv_out(f)
+#
+#         return {"out": out,
+#                 "base": base,
+#                 "A": similarity.view(b, -1, h, w)}
 
 
 

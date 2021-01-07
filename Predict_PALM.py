@@ -14,7 +14,7 @@ from model.choose_model import seg_model
 # #################################### predict settings 预测提交结果 ####################################
 pred_data_root = '/home/sjh/dataset/PLAM/PALM-Validation400'
 pred_dir = "Atrophy"
-model_dir = "checkpoints//fold_1/CP_epoch250_78.4423.pth"
+model_dir = "checkpoints/fold_2/CP_epoch200_85.9223.pth"
 # #################################### predict settings 预测提交结果 ####################################
 
 
@@ -47,21 +47,21 @@ def pred(model, device, args):
 def recover_sigle_image_size_and_save(image, crop_size, image_size, file_name):
     assert len(image.size())==3
 
-    ratio_h = crop_size[0] / float(image_size[1])   # 高度比例
-    ratio_w = crop_size[1] / float(image_size[0])   # 宽度比例
+    ratio_h = crop_size[0] / float(image_size[0])   # 高度比例
+    ratio_w = crop_size[1] / float(image_size[1])   # 宽度比例
     ratio = min(ratio_h, ratio_w)
-    h = int(image_size[1] *ratio)
-    w = int(image_size[0] *ratio)
+    h = int(image_size[0] *ratio)
+    w = int(image_size[1] *ratio)
     # 裁剪去掉pad
     image_crop = image[:, 0:h, 0:w].unsqueeze(0)
-    image = F.interpolate(image_crop, size=(image_size[1], image_size[0]), mode="bilinear", align_corners=True)
+    image = F.interpolate(image_crop, size=(image_size[0], image_size[1]), mode="bilinear", align_corners=True)
     # 阈值处理
     pred_image = torch.exp(image).max(dim=1)[1]
     pred_image = pred_image.cpu().squeeze().numpy()
     pred_image = (1 - np.array(pred_image, dtype=np.int8))*255
     # 保存
-    pred_image = Image.fromarray(pred_image).convert('RGB')
-    pred_image.save(os.path.join(pred_dir, file_name) + ".png")
+    pred_image = Image.fromarray(pred_image).convert('L')
+    pred_image.save(os.path.join(pred_dir, file_name) + ".bmp")
 
 
 

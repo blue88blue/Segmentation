@@ -1,6 +1,7 @@
 import os
 import time
 import csv
+import shutil
 from dataset.dataset_PALM import *
 
 class basic_setting():
@@ -12,8 +13,8 @@ class basic_setting():
 
     # #################################### train Data settings ####################################
     dataset_file_list = "utils/PALM_dataset_list.csv"  # 交叉验证所需文件名列表
-    data_root = '/home/sjh/dataset/PLAM/PALM-Training400/PALM-Training400'
-    target_root = "/home/sjh/dataset/PLAM/PALM-Training400/PALM-Training400-Annotation-Lession/Lesion_Masks/Atrophy1"  # 萎缩标签
+    data_root = '/home/sjh/dataset/PLAM/PALM-Training400/PALM-Training400_resize'
+    target_root = "/home/sjh/dataset/PLAM/PALM-Training400/PALM-Training400-Annotation-Lession/Lesion_Masks/Atrophy1_resize"  # 萎缩标签
     crop_size = (448, 448)
 
     # #################################### train file settings ####################################
@@ -23,14 +24,14 @@ class basic_setting():
     # #################################### model settings ####################################
     in_channel = 3
     n_class = 2
-    network = "BiNet"  # 模型名， 或实验名称
-    note = ""  # 标签(区分不同训练设置)
+    network = "EMUPNet"  # 模型名， 或实验名称
+    note = "new_channelGCN"  # 标签(区分不同训练设置)
     Ulikenet_channel_reduction = 2  # 类Unet模型通道衰减数(默认通道减半)
     backbone = "resnet34"  # 继承自SegBaseModel的模型backbone
     pretrained = True
     dilated = False
     deep_stem = False
-    aux = True
+    aux = False
 
     # #################################### train settings ####################################
     optim = "Adam"
@@ -47,7 +48,7 @@ class basic_setting():
     # cuda_id = "0"
 
     # #################################### test settings ####################################
-    test_run_file = "2020-1224-1711_39_DF_ResUnet_edge_1_fold_4"
+    test_run_file = "2021-0103-2146_34_channel_gcn_Net__fold_4_82.00"
     label_names = ["bg", "atrophy"]
     plot = True  # 保存测试预测图片
 
@@ -90,7 +91,8 @@ class basic_setting():
                     os.mkdir(log_i_dir)
                     self.checkpoint_dir.append(cp_i_dir)
                     self.log_dir.append(log_i_dir)
-            self.logger(self.dir+"/train_log")
+            shutil.copytree('.', os.path.join(self.dir, "code"), shutil.ignore_patterns(['.git', '__pycache__']))
+
 
         if self.mode == "test" or self.mode == "train_test":
             if self.mode == "test":
@@ -121,7 +123,6 @@ class basic_setting():
                 if not os.path.exists(self.plot_save_dir):
                     os.mkdir(self.plot_save_dir)
 
-
     # 记录训练参数与信息
     def logger(self, file):
         with open(file, "a") as f:
@@ -130,4 +131,3 @@ class basic_setting():
                 if ("__"or "test_" or "val_" or "root" or "logger" or "dir") not in att:
                     f.write(f'{str(att)}:    {str(getattr(self, att))}\n\n')
             f.close()
-

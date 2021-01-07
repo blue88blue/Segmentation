@@ -2,7 +2,7 @@ import os
 import time
 import csv
 import shutil
-from dataset.dataset_COVID19 import *
+from dataset.dataset_hubmap import *
 
 class basic_setting():
 
@@ -12,13 +12,13 @@ class basic_setting():
     end_fold = 1
 
     # #################################### train Data settings ####################################
-    dataset_file_list = "utils/COVID19_dataset_list.csv"  # 交叉验证所需文件名列表
-    data_root = '/media/sjh/disk1T/dataset/COVID-19-20_v2/train_slices_positive/image'
-    target_root = "/media/sjh/disk1T/dataset/COVID-19-20_v2/train_slices_positive/label"  # 标签
+    dataset_file_list = "utils/PALM_dataset_list.csv"  # 交叉验证所需文件名列表
+    data_root = ''
+    target_root = ""
     crop_size = (256, 256)
 
     # #################################### train file settings ####################################
-    run_dir = "/media/sjh/disk1T/COVID19"                      # 数据集名称
+    run_dir = "kidney"                      # 数据集名称
     val_step = 2                          # 每训练几个epoch进行一次验证
 
     # #################################### model settings ####################################
@@ -37,26 +37,26 @@ class basic_setting():
     optim = "Adam"
     class_weight = [0.5, 0.5]
     OHEM = False
-    num_epochs = 150
-    batch_size = 8
+    num_epochs = 100
+    batch_size = 4
     num_workers = 8
     aux_weight = 0.5
-    dice_weight = 1
-    lr = 0.001
+    dice_weight = 1.0
+    lr = 0.0001
     momentum = 0.9
     weight_decay = 1e-4
     # cuda_id = "0"
 
     # #################################### test settings ####################################
-    test_run_file = "2020-1107-1429_45_Unet__fold_6"
-    label_names = ["bg", "COVID19"]
+    test_run_file = "2020-1022-2134_44_EMUPNet_EM-x_fold_4__82.7263"
+    label_names = ["bg", "atrophy"]
     plot = True  # 保存测试预测图片
 
 
     def __init__(self):
         if not os.path.exists("./runs"):
             os.mkdir("./runs")
-        # self.run_dir = "./runs/"+self.run_dir
+        self.run_dir = "./runs/"+self.run_dir
         if not os.path.exists(self.run_dir):
             os.mkdir(self.run_dir)
 

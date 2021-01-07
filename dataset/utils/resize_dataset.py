@@ -30,7 +30,7 @@ def resize_data_ISIC(train_image, train_mask, size=(256, 192)):
 
 
 
-def resize_data_PALM(train_image, train_mask, size=(512, 512)):
+def resize_data_PALM(train_image, train_mask, size=(448, 448)):
     train_image_resize = train_image + "_resize"
     train_mask_resize = train_mask + "_resize"
     if not os.path.exists(train_image_resize):
@@ -110,3 +110,21 @@ def COVID_19_volume2PNG(image_dir, out_dir):
             if mask is not None:
                 mask_ = Image.fromarray(mask[num, ...]).convert("L")
                 mask_.save(os.path.join(out_mask_dir, volume_file_name + f"_{num}.png"))
+
+
+
+
+
+
+resize_data_PALM('/home/sjh/dataset/PLAM/PALM-Training400/PALM-Training400', "/home/sjh/dataset/PLAM/PALM-Training400/PALM-Training400-Annotation-Lession/Lesion_Masks/Atrophy1", size=(448, 448))
+
+
+
+
+
+
+
+
+
+
+

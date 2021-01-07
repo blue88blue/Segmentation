@@ -7,7 +7,7 @@ import os
 Image.MAX_IMAGE_PIXELS = None
 import cv2
 # 随机旋转
-def random_Rotate(img, label=None):
+def random_Rotate(img, label=None, r=60):
     rand = int(float(torch.rand(1)-0.5)*60)
     img = img.rotate(rand)
     if label is not None:
@@ -15,38 +15,37 @@ def random_Rotate(img, label=None):
     return img, label
 
 # 随机对比度
-def random_Contrast(img):
+def random_Contrast(img, r=0.5):
     v = float(torch.rand(1)) * 2
-    if 0.5 <= v <= 1.5:
+    if (1-r) <= v <= (1+r):
         return PIL.ImageEnhance.Contrast(img).enhance(v)
     else:
         return img
 
 # 随机颜色鲜艳或灰暗
-def random_Color(img):
+def random_Color(img, r=0.5):
     v = float(torch.rand(1)) * 2
-    if 0.4 <= v <= 1.5:
+    if (1-r) <= v <= (1+r):
         return PIL.ImageEnhance.Color(img).enhance(v)
     else:
         return img
 
 # 随机亮度变换
-def random_Brightness(img):  # [0.1,1.9]
+def random_Brightness(img, r=0.5):  # [0.1,1.9]
     v = float(torch.rand(1)) * 2
-    if 0.4 <= v <= 1.5:
+    if (1-r) <= v <= (1+r):
         return PIL.ImageEnhance.Brightness(img).enhance(v)
     else:
         return img
 
 # 随机高斯模糊
-def random_GaussianBlur(img):
+def random_GaussianBlur(img, r=0.4):
     p = float(torch.rand(1))
-    if p > 0.6:
+    if p < r:
         v = float(torch.rand(1))+1.2
         return img.filter(PIL.ImageFilter.GaussianBlur(radius=v))
     else:
         return img
-
 # 随机变换
 def random_transfrom(image, label=None):
     # image = random_Color(image)
@@ -75,7 +74,7 @@ def fetch(image_path, label_path=None):
 def convert_to_tensor(image, label=None, mean=0.5, std=0.5):
     image = torch.FloatTensor(np.array(image)) / 255
     image = (image - mean) / std
-    # image = image - torch.Tensor(np.array([0.5, 0.5, 0.5]))
+
     if len(image.size()) == 2:
         image = image.unsqueeze(0)
     else:
@@ -113,6 +112,17 @@ def scale_adaptive(crop_size, image, label=None):
     return image, label
 
 
+def scale_adaptive_PIL(crop_size, image, label=None):
+    image_size = image.size
+    ratio_w = float(crop_size[1] / image_size[0])
+    ratio_h = float(crop_size[0] / image_size[1])
+    ratio = min(ratio_h, ratio_w)
+    size = (int(image_size[0]*ratio), int(image_size[1]*ratio))
+
+    image = image.resize(size, Image.BILINEAR)
+    if label is not None:
+        label = label.resize(size, Image.NEAREST)
+    return image, label
 
 
 # resize
@@ -121,6 +131,15 @@ def resize(crop_size, image, label=None):
     if label is not None:
         label = F.interpolate(label.unsqueeze(0), size=crop_size, mode='nearest').squeeze(0)
     return image, label 
+
+
+def resize_PIL(crop_size, image, label=None):
+    size = (crop_size[1], crop_size[0])
+    image = image.resize(size, Image.BILINEAR)
+    if label is not None:
+        label = label.resize(size, Image.NEAREST)
+    return image, label
+
 
 
 # 随机裁剪

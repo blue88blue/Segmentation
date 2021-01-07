@@ -1,4 +1,4 @@
-from settings_PALM import *
+from settings_RETOUCH import *
 import torch.nn.functional as F
 from utils import utils
 from torch.utils.data import DataLoader
@@ -17,6 +17,7 @@ import time
 import torchsummary
 from torchvision.utils import save_image
 from utils.flow2image import flow_to_image
+from utils.forward_3D import *
 # models
 from model.choose_model import seg_model
 
@@ -44,9 +45,15 @@ def main(args, num_fold=0):
 
     elif args.mode == "test":
         if args.k_fold is not None:
-            return test(model, device, args, num_fold=num_fold)
+            if hasattr(args, 'test_3D'):
+                return test_3D(model, device, args, num_fold=num_fold)
+            else:
+                return test(model, device, args, num_fold=num_fold)
         else:
-            test(model, device, args, num_fold=num_fold)
+            if hasattr(args, 'test_3D'):
+                test_3D(model, device, args, num_fold=num_fold)
+            else:
+                test(model, device, args, num_fold=num_fold)
     else:
         raise NotImplementedError
 
@@ -93,7 +100,9 @@ def train(model, device, args, num_fold=0):
                 # 读取训练数据
                 image = batch["image"]
                 label = batch["label"]
-                # print(batch["file"])
+                # save_image(image, "image.png")
+                # save_image(label.unsqueeze(1), "label.png")
+
                 assert len(image.size()) == 4
                 assert len(label.size()) == 3
                 image = image.to(device, dtype=torch.float32)
@@ -174,7 +183,10 @@ def train(model, device, args, num_fold=0):
 
         if (epoch+1) % args.val_step == 0:
             # 验证
-            mDice, mIoU, mAcc, mSensitivity, mSpecificity = val(model, dataloader_val, num_train_val, device, args)
+            if hasattr(args, 'test_3D'):
+                mDice, mIoU, mAcc, mSensitivity, mSpecificity = val_3D(model, device, args, num_fold)
+            else:
+                mDice, mIoU, mAcc, mSensitivity, mSpecificity = val(model, dataloader_val, num_train_val, device, args)
             writer.add_scalar("Valid/Dice_val", mDice, step)
             writer.add_scalar("Valid/IoU_val", mIoU, step)
             writer.add_scalar("Valid/Acc_val", mAcc, step)
@@ -259,7 +271,7 @@ def test(model, device, args, num_fold=0):
 
     dataset_test = myDataset(args.data_root, args.target_root, args.crop_size, "test",
                                 k_fold=args.k_fold, imagefile_csv=args.dataset_file_list, num_fold=num_fold)
-    dataloader = DataLoader(dataset_test, batch_size=args.batch_size, shuffle=False, num_workers=args.num_workers, pin_memory=True)
+    dataloader = DataLoader(dataset_test, batch_size=1, shuffle=False, num_workers=args.num_workers, pin_memory=True)
 
     all_dice = []
     all_iou = []
@@ -273,17 +285,19 @@ def test(model, device, args, num_fold=0):
                 image = batch["image"]
                 label = batch["label"]
                 file = batch["file"]
+
                 assert len(image.size()) == 4
                 assert len(label.size()) == 3
                 image = image.to(device, dtype=torch.float32)
                 label = label.to(device, dtype=torch.long)
 
                 outputs = model(image)
-                pred = outputs["main_out"]
-                pred = torch.exp(pred).max(dim=1)[1]  # 阈值处理
 
                 for b in range(image.size()[0]):
-                    hist = utils.fast_hist(label[b,:,:], pred[b,:,:], args.n_class)
+                    pred = myDataset.recover_image(outputs["main_out"][b], batch["image_size"][b], args.crop_size)
+                    pred = torch.exp(pred).max(dim=0)[1]  # 阈值处理
+
+                    hist = utils.fast_hist(label[b,:,:], pred, args.n_class)
                     dice, iou, acc, Sensitivity, Specificity = utils.cal_scores(hist.cpu().numpy(), smooth=0.01)
 
                     # 写入每个测试数据的指标
@@ -344,7 +358,7 @@ def test(model, device, args, num_fold=0):
                             edge = outputs["edge"][b].cpu()
                             save_image(edge, os.path.join(args.plot_save_dir, file_name + f"_edge.png"))
                         save_image(image[b, :, :].cpu(), os.path.join(args.plot_save_dir, file[b]))
-                        pred_image = pred[b, :, :].unsqueeze(0)
+                        pred_image = pred.unsqueeze(0)
                         true_mask = label[b, :, :].unsqueeze(0)
                         result_image = torch.cat((pred_image, true_mask, torch.zeros_like(pred_image)), dim=0).permute(1, 2, 0).cpu().numpy()
                         result_image = Image.fromarray(np.uint8(result_image) * 255)

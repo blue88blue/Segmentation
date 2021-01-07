@@ -3,7 +3,7 @@ import torch
 import os
 from PIL import Image
 from torch.nn import functional as F
-from settings_COVID19 import *
+from settings_PALM import *
 import numpy as np
 import csv
 from tqdm import tqdm

@@ -1,6 +1,7 @@
 import os
 import time
 import csv
+import shutil
 from dataset.dataset_ISIC import *
 
 resize_data('/media/sjh/disk1T/dataset/ISIC/ISIC2018_Task1-2_Training_Input', "/media/sjh/disk1T/dataset/ISIC/ISIC2018_Task1_Training_GroundTruth", size=(512, 384))
@@ -92,7 +93,7 @@ class basic_setting():
                     os.mkdir(log_i_dir)
                     self.checkpoint_dir.append(cp_i_dir)
                     self.log_dir.append(log_i_dir)
-            self.logger(self.dir+"/train_log")
+            shutil.copytree('.', os.path.join(self.dir, "code"), shutil.ignore_patterns(['.git', '__pycache__']))
 
         if self.mode == "test" or self.mode == "train_test":
             if self.mode == "test":
