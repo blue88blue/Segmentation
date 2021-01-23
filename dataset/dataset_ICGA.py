@@ -2,11 +2,12 @@ from torch.utils.data import Dataset
 import csv
 import os
 from PIL import Image
+from torchvision.utils import save_image
 from .transform import*
 
 
-mean = torch.Tensor(np.array([0.7085446,  0.58216874, 0.53626412]))
-std = torch.Tensor(np.array([0.09625552, 0.11072131, 0.12459033]))
+mean = torch.Tensor(np.array([0.37474884]))
+std = torch.Tensor(np.array([0.22861719]))
 
 
 class myDataset(Dataset):
@@ -28,12 +29,11 @@ class myDataset(Dataset):
             fold = num_fold - 1
             if data_mode == "train":
                 self.image_files = image_files[0: fold*fold_size] + image_files[fold*fold_size+fold_size:]
-                # self.image_files = self.image_files[:200]
             elif data_mode == "val" or data_mode == "test":
                 if num_fold == k_fold:
-                    self.image_files = image_files[fold * fold_size:]
+                    self.image_files = image_files[fold * fold_size: ]
                 else:
-                    self.image_files = image_files[fold * fold_size: fold * fold_size + fold_size]
+                    self.image_files = image_files[fold*fold_size: fold*fold_size+fold_size]
             else:
                 raise NotImplementedError
             print(f"{data_mode} dataset fold{num_fold}/{k_fold}: {len(self.image_files)} images")
@@ -44,22 +44,21 @@ class myDataset(Dataset):
     def __getitem__(self, idx):
         file = self.image_files[idx]
         file_name, _ = os.path.splitext(file)
-
         image_path = os.path.join(self.data_root, file)
-        label_path = os.path.join(self.target_root, file_name+"_segmentation.png")
+        label_path = os.path.join(self.target_root, file_name+"_GT.png")
 
         image, label = fetch(image_path, label_path)
         image_size = image.size
 
         if self.data_mode == "train":  # 数据增强
-            image = random_Contrast(image)
-            image = random_Brightness(image)
+            image = random_Contrast(image, 0.3)
+            image, label = random_Rotate(image, label)
 
-        image, label = convert_to_tensor(image, label, mean=mean, std=std)
+        image, label = convert_to_tensor(image, label, mean=mean, std=std,norm=False)
+        image = image.repeat((3, 1, 1))  # 将灰度图增加成3通道
         # -------标签处理-------
-        label = (label >= 128).float()
+        label = (label == 240).float()
         # -------标签处理-------
-        # image, label = resize(self.crop_size, image, label)
 
         if self.data_mode == "train":  # 数据增强
             image, label = random_Top_Bottom_filp(image, label)
@@ -72,39 +71,16 @@ class myDataset(Dataset):
             "file": file,
             "image_size": torch.tensor((image_size[1], image_size[0]))}
 
+
+
     @classmethod
     def recover_image(self, image, image_size, crop_size=None):
         assert len(image.size()) == 3
 
-        image = F.interpolate(image.unsqueeze(), size=(image_size[0], image_size[1]), mode="bilinear", align_corners=True)
-        image = image.squeeze(0)
+        # image = F.interpolate(image.unsqueeze(), size=(image_size[0], image_size[1]), mode="bilinear", align_corners=True)
+        # image = image.squeeze(0)
 
         return image
 
 
 
-def resize_data(train_image, train_mask, size=(256, 192)):
-    train_image_resize = train_image + "_resize"
-    train_mask_resize = train_mask + "_resize"
-    if not os.path.exists(train_image_resize):
-        os.mkdir(train_image_resize)
-    if not os.path.exists(train_mask_resize):
-        os.mkdir(train_mask_resize)
-
-    # 训练集resize
-    train_image_list = sorted(os.listdir(train_image))
-    for file in train_image_list:
-        print(file)
-        file_name = os.path.splitext(file)[0]
-        image_file = os.path.join(train_image, file)
-        mask_file = os.path.join(train_mask, file_name + "_segmentation.png")
-        image = Image.open(image_file)
-        mask = Image.open(mask_file) if os.path.exists(mask_file) else None
-
-        # if mask is not None:  # 只保存有病的图片
-        image = image.resize(size, Image.BILINEAR)
-        image.save(os.path.join(train_image_resize, file))
-        mask = mask.resize(size, Image.NEAREST)
-        mask.save(os.path.join(train_mask_resize, file_name + "_segmentation.png"))
-
-# resize_data('/media/sjh/disk1T/dataset/ISIC/ISIC2018_Task1-2_Training_Input', "/media/sjh/disk1T/dataset/ISIC/ISIC2018_Task1_Training_GroundTruth")

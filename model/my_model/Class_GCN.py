@@ -177,9 +177,11 @@ class class_gcn_2(nn.Module):
 
         inter_channel = in_channel//2
         self.node = 64
-        self.st1 = squeeze_and_expand(in_channel, self.node, inter_channel)
-        self.st2 = squeeze_and_expand(in_channel, self.node, inter_channel)
-        self.gcn = GCN(inter_channel, int(self.node*2))
+        self.st = nn.ModuleList()
+        for i in range(n_class):
+            self.st.append(squeeze_and_expand(in_channel, self.node, inter_channel))
+
+        self.gcn = GCN(inter_channel, int(self.node*n_class))
 
         for m in self.modules():
             if isinstance(m, nn.Conv2d):
@@ -195,18 +197,22 @@ class class_gcn_2(nn.Module):
             aux_pred = F.softmax(aux_out, dim=1)
             aux_pred = aux_pred.detach()
 
-        x1 = x * aux_pred[:, 0, ...].unsqueeze(dim=1)
-        x2 = x * aux_pred[:, 1, ...].unsqueeze(dim=1)
-        x_n_state_1, x_proj_1 = self.st1.squeeze(x1)
-        x_n_state_2, x_proj_2 = self.st2.squeeze(x2)
-        x_n_state = torch.cat((x_n_state_1, x_n_state_2), dim=-1)
+        x_n_states = []
+        for i in range(self.n_class):
+            x_ = x * aux_pred[:, i, ...].unsqueeze(dim=1)
+            x_n_state, _ = self.st[i].squeeze(x_)
+            x_n_states.append(x_n_state)
+        x_n_state = torch.cat(x_n_states, dim=-1)
 
         x_n_rel = self.gcn(x_n_state)  # (b, c, node*2)
-        x_n_rel_1, x_n_rel_2 = x_n_rel[:, :, :self.node], x_n_rel[:, :, self.node:]
 
-        x1_restruct = self.st1.expand(x_n_rel_1)
-        x2_restruct = self.st2.expand(x_n_rel_2)
-        out = idn + x1_restruct + x2_restruct
+        x_restruct_all = 0
+        for i in range(self.n_class):
+            x_n_rel_i = x_n_rel[:, :, self.node*i: self.node*(i+1)]
+            x_restruct_i = self.st[i].expand(x_n_rel_i)
+            x_restruct_all += x_restruct_i
+
+        out = idn + x_restruct_all/self.n_class
         return {"aux_out": aux_out,
                 "out": out,
                 "aux_pred": aux_pred}

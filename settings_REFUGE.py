@@ -48,6 +48,7 @@ class basic_setting():
     # cuda_id = "0"
 
     # #################################### test settings ####################################
+    drop_non = False
     test_run_file = "2020-1012-2205_29_EMANet_midEMA+SF-NOc1_fold_4"
     label_names = ["bg", "disc", "cup"]
     plot = True  # 保存测试预测图片

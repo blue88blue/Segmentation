@@ -1,4 +1,5 @@
 from model.Unet import Unet
+from model.SegNet import SegNet
 from model.AttUnet import AttUnet
 from model.PSPNet import PSPNet
 from model.DeepLabV3 import DeepLabV3
@@ -22,12 +23,15 @@ from model.my_model.DF_ResUnet import DF_ResUnet
 from model.my_model.GloRe import GloRe_Net
 from model.my_model.BiNet import BiNet, BiNet_baseline
 from model.my_model.channel_GCN import channel_gcn_Net
+from model.my_model.shuffle_Net import shuffle_Unet
 
 def seg_model(args):
     if args.network == "Unet":
         model = Unet(args.in_channel, args.n_class, channel_reduction=args.Ulikenet_channel_reduction, aux=args.aux)
     elif args.network == "AttUnet":
         model = AttUnet(args.in_channel, args.n_class, channel_reduction=args.Ulikenet_channel_reduction, aux=args.aux)
+    elif args.network == "SegNet":
+        model = SegNet(args.in_channel, args.n_class)
     elif args.network == "PSPNet":
         model = PSPNet(args.n_class, args.backbone, aux=args.aux, pretrained_base=args.pretrained, dilated=args.dilated, deep_stem=args.deep_stem)
     elif args.network == "DeepLabV3":
@@ -74,6 +78,8 @@ def seg_model(args):
         model = BiNet_baseline(args.n_class, args.backbone, aux=args.aux, pretrained_base=args.pretrained, dilated=args.dilated, deep_stem=args.deep_stem)
     elif args.network == "channel_gcn_Net":
         model = channel_gcn_Net(args.n_class, args.backbone, aux=args.aux, pretrained_base=args.pretrained, dilated=args.dilated, deep_stem=args.deep_stem)
+    elif args.network == "shuffle_Unet":
+        model = shuffle_Unet(args.in_channel, args.n_class, channel_reduction=args.Ulikenet_channel_reduction, aux=args.aux)
     else:
         NotImplementedError("not implemented {args.network} model")
 

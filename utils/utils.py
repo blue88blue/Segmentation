@@ -30,7 +30,7 @@ def fast_hist(label_true, label_pred, n_class):
     return hist
 
 # 计算指标
-def cal_scores(hist, smooth=1):
+def cal_scores(hist, smooth=1, drop_non=False):
     TP = np.diag(hist)
     FP = hist.sum(axis=0) - TP
     FN = hist.sum(axis=1) - TP
@@ -47,27 +47,60 @@ def cal_scores(hist, smooth=1):
 
     Specificity = (TN+smooth) / (FP+TN+smooth)
 
+    # 若不存在某一类， 则该类的指标=0
+    if drop_non:
+        positive = TP + FN
+        mask = positive > 0
+        dice *= mask
+        iou *= mask
+        Sensitivity *= mask
+        Specificity *= mask
+
     return dice[1:]*100, iou[1:]*100, Precision*100, Sensitivity[1:]*100, Specificity[1:]*100
 
 
 
 # 保存打印指标
-def save_print_score(all_dice, all_iou, all_acc, all_sen, all_spe, file, label_names):
+def save_print_score(all_dice, all_iou, all_acc, all_sen, all_spe, file, label_names, drop_non=False):
     all_dice = np.array(all_dice)
     all_iou = np.array(all_iou)
     all_acc = np.array(all_acc)
     all_sen = np.array(all_sen)
     all_spe = np.array(all_spe)
-    test_mean = ["mean"]+[all_dice.mean()] + list(all_dice.mean(axis=0)) + \
-                [all_iou.mean()] + list(all_iou.mean(axis=0)) + \
-                [all_acc.mean()] + \
-                [all_sen.mean()] + list(all_sen.mean(axis=0)) + \
-                [all_spe.mean()] + list(all_spe.mean(axis=0))
-    test_std = ["std"]+[all_dice.std()] + list(all_dice.std(axis=0)) + \
-               [all_iou.std()] + list(all_iou.std(axis=0)) + \
-               [all_acc.std()] + \
-               [all_sen.std()] + list(all_sen.std(axis=0)) + \
-               [all_spe.std()] + list(all_spe.std(axis=0))
+    if drop_non:
+        dice_class = all_dice.sum(axis=0)/np.sum(all_dice > 0, axis=0)
+        iou_class = all_iou.sum(axis=0) / np.sum(all_iou > 0, axis=0)
+        sen_class = all_sen.sum(axis=0) / np.sum(all_sen > 0, axis=0)
+        spe_class = all_spe.sum(axis=0) / np.sum(all_spe > 0, axis=0)
+        test_mean = ["mean"] + [dice_class.mean()] + list(dice_class) + \
+                    [iou_class.mean()] + list(iou_class) + \
+                    [all_acc.mean()] + \
+                    [sen_class.mean()] + list(sen_class) + \
+                    [spe_class.mean()] + list(spe_class)
+        test_std = [None]
+        print("\n##############Test Result##############")
+        print(f'mDice: {dice_class.mean()}')
+        print(f'mIoU:  {iou_class.mean()}')
+        print(f'mAcc:  {all_acc.mean()}')
+        print(f'mSens: {sen_class.mean()}')
+        print(f'mSpec: {spe_class.mean()}')
+    else:
+        test_mean = ["mean"]+[all_dice.mean()] + list(all_dice.mean(axis=0)) + \
+                    [all_iou.mean()] + list(all_iou.mean(axis=0)) + \
+                    [all_acc.mean()] + \
+                    [all_sen.mean()] + list(all_sen.mean(axis=0)) + \
+                    [all_spe.mean()] + list(all_spe.mean(axis=0))
+        test_std = ["std"]+[all_dice.std()] + list(all_dice.std(axis=0)) + \
+                   [all_iou.std()] + list(all_iou.std(axis=0)) + \
+                   [all_acc.std()] + \
+                   [all_sen.std()] + list(all_sen.std(axis=0)) + \
+                   [all_spe.std()] + list(all_spe.std(axis=0))
+        print("\n##############Test Result##############")
+        print(f'mDice: {all_dice.mean()}')
+        print(f'mIoU:  {all_iou.mean()}')
+        print(f'mAcc:  {all_acc.mean()}')
+        print(f'mSens: {all_sen.mean()}')
+        print(f'mSpec: {all_spe.mean()}')
     label_names = label_names[1:]
     title = [' ', 'mDice'] + [name + "_dice" for name in label_names] + \
             ['mIoU'] + [name + "_iou" for name in label_names] + \
@@ -81,12 +114,6 @@ def save_print_score(all_dice, all_iou, all_acc, all_sen, all_spe, file, label_n
         w.writerow(test_mean)
         w.writerow(test_std)
 
-    print("\n##############Test Result##############")
-    print(f'mDice: {all_dice.mean()}')
-    print(f'mIoU:  {all_iou.mean()}')
-    print(f'mAcc:  {all_acc.mean()}')
-    print(f'mSens: {all_sen.mean()}')
-    print(f'mSpec: {all_spe.mean()}')
 
 
 
@@ -95,7 +122,7 @@ def best_model_in_fold(val_result, num_fold):
     best_epoch = 0
     best_dice = 0
     for row in val_result:
-        if str(num_fold) in row:
+        if str(num_fold) == row[0]:
             if best_dice < float(row[2]):
                 best_dice = float(row[2])
                 best_epoch = int(row[1])

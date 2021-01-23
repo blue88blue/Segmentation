@@ -48,6 +48,7 @@ class basic_setting():
     # cuda_id = "0"
 
     # #################################### test settings ####################################
+    drop_non = False
     test_run_file = "2020-1022-2134_44_EMUPNet_EM-x_fold_4__82.7263"
     label_names = ["bg", "atrophy"]
     plot = True  # 保存测试预测图片

@@ -1,4 +1,4 @@
-from settings_RETOUCH import *
+from settings_PMdata620 import *
 import torch.nn.functional as F
 from utils import utils
 from torch.utils.data import DataLoader
@@ -70,7 +70,7 @@ def train(model, device, args, num_fold=0):
     dataset_val = myDataset(args.data_root, args.target_root, args.crop_size, "val",
                                k_fold=args.k_fold, imagefile_csv=args.dataset_file_list, num_fold=num_fold)
     dataloader_val = DataLoader(dataset_val, batch_size=args.batch_size, shuffle=False,
-                                num_workers=args.num_workers, pin_memory=True, drop_last=True)
+                                num_workers=args.num_workers, pin_memory=True, drop_last=False)
     num_train_val = len(dataset_val)  # 验证数据大小
     ####################
     writer = SummaryWriter(log_dir=args.log_dir[num_fold], comment=f'tb_log')
@@ -100,8 +100,9 @@ def train(model, device, args, num_fold=0):
                 # 读取训练数据
                 image = batch["image"]
                 label = batch["label"]
-                # save_image(image, "image.png")
-                # save_image(label.unsqueeze(1), "label.png")
+                print(image.size(), label.size(), torch.unique(label))
+                save_image(image, "image.png")
+                save_image(label.unsqueeze(1), "label.png")
 
                 assert len(image.size()) == 4
                 assert len(label.size()) == 3
@@ -437,7 +438,7 @@ if __name__ == "__main__":
                 all_acc += Acc
                 all_sen += Sensitivity
                 all_spe += Specificity
-            utils.save_print_score(all_dice, all_iou, all_acc, all_sen, all_spe, args.test_result_file, args.label_names)
+            utils.save_print_score(all_dice, all_iou, all_acc, all_sen, all_spe, args.test_result_file, args.label_names, drop_non=args.drop_non)
 
 
 

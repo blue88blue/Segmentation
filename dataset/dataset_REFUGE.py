@@ -32,7 +32,10 @@ class myDataset(Dataset):
                 self.image_files = image_files[0: fold*fold_size] + image_files[fold*fold_size+fold_size:]
                 # self.image_files = self.image_files[:400]
             elif data_mode == "val" or data_mode == "test":
-                self.image_files = image_files[fold*fold_size: fold*fold_size+fold_size]
+                if num_fold == k_fold:
+                    self.image_files = image_files[fold * fold_size:]
+                else:
+                    self.image_files = image_files[fold * fold_size: fold * fold_size + fold_size]
             else:
                 raise NotImplementedError
             print(f"{data_mode} dataset fold{num_fold}/{k_fold}: {len(self.image_files)} images")

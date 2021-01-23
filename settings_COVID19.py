@@ -7,24 +7,27 @@ from dataset.dataset_COVID19 import *
 class basic_setting():
 
     mode = "train_test"                             # train,  test,  train_test
-    k_fold = 6                              # None 不交叉验证 验证集即为训练集
+    k_fold = 3                              # None 不交叉验证 验证集即为训练集
     start_fold = 0
-    end_fold = 1
+    end_fold = k_fold
 
     # #################################### train Data settings ####################################
     dataset_file_list = "utils/COVID19_dataset_list.csv"  # 交叉验证所需文件名列表
-    data_root = '/media/sjh/disk1T/dataset/COVID-19-20_v2/train_slices_positive/image'
-    target_root = "/media/sjh/disk1T/dataset/COVID-19-20_v2/train_slices_positive/label"  # 标签
-    crop_size = (256, 256)
+    data_root = '/media/sjh/disk1T/dataset/COVID-19-20_v2/train_2.5D_fold3/train_all/img'
+    target_root = "/media/sjh/disk1T/dataset/COVID-19-20_v2/train_2.5D_fold3/train_all/mask"
+
+    val_data_root = "/media/sjh/disk1T/dataset/COVID-19-20_v2/train_2.5D_fold3/train_drop/img"
+    val_target_root = "/media/sjh/disk1T/dataset/COVID-19-20_v2/train_2.5D_fold3/train_drop/mask"
+    crop_size = (512, 512)
 
     # #################################### train file settings ####################################
-    run_dir = "/media/sjh/disk1T/COVID19"                      # 数据集名称
-    val_step = 2                          # 每训练几个epoch进行一次验证
+    run_dir = "/media/sjh/disk1T/RUNS/COVID19"                      # 数据集名称
+    val_step = 1                          # 每训练几个epoch进行一次验证
 
     # #################################### model settings ####################################
     in_channel = 3
     n_class = 2
-    network = "Unet"  # 模型名， 或实验名称
+    network = "ResUnet"  # 模型名， 或实验名称
     note = ""  # 标签(区分不同训练设置)
     Ulikenet_channel_reduction = 2  # 类Unet模型通道衰减数(默认通道减半)
     backbone = "resnet34"  # 继承自SegBaseModel的模型backbone
@@ -34,28 +37,30 @@ class basic_setting():
     aux = False
 
     # #################################### train settings ####################################
-    optim = "Adam"
+    test_3D = True
+    optim = "SGD"
     class_weight = [0.5, 0.5]
     OHEM = False
-    num_epochs = 150
-    batch_size = 8
+    num_epochs = 50
+    batch_size = 4
     num_workers = 8
     aux_weight = 0.5
     dice_weight = 1
-    lr = 0.001
+    lr = 0.01
     momentum = 0.9
     weight_decay = 1e-4
     # cuda_id = "0"
 
     # #################################### test settings ####################################
+    drop_non = False
     test_run_file = "2020-1107-1429_45_Unet__fold_6"
     label_names = ["bg", "COVID19"]
     plot = True  # 保存测试预测图片
 
 
     def __init__(self):
-        if not os.path.exists("./runs"):
-            os.mkdir("./runs")
+        # if not os.path.exists("./runs"):
+        #     os.mkdir("./runs")
         # self.run_dir = "./runs/"+self.run_dir
         if not os.path.exists(self.run_dir):
             os.mkdir(self.run_dir)

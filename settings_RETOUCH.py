@@ -13,9 +13,12 @@ class basic_setting():
 
     # #################################### train Data settings ####################################
     dataset_file_list = "utils/RETUCH_dataset_list.csv"  # 交叉验证所需文件名列表
-    data_root = '/media/sjh/disk1T/dataset/RETOUCH_crop/train_all/img'
-    target_root = "/media/sjh/disk1T/dataset/RETOUCH_crop/train_all/mask"  # 萎缩标签
-    crop_size = (512, 448)
+    data_root = '/media/sjh/disk1T/dataset/RETOUCH_crop/train_drop/img'
+    target_root = "/media/sjh/disk1T/dataset/RETOUCH_crop/train_drop/mask"  # 萎缩标签
+
+    val_data_root = '/media/sjh/disk1T/dataset/RETOUCH_crop/train_all/img'
+    val_target_root = "/media/sjh/disk1T/dataset/RETOUCH_crop/train_all/mask"  # 萎缩标签
+    crop_size = (512, 256)
 
     # #################################### train file settings ####################################
     run_dir = "/media/sjh/disk1T/RUNS/RETOUCH"                      # 数据集名称
@@ -24,7 +27,7 @@ class basic_setting():
     # #################################### model settings ####################################
     in_channel = 3
     n_class = 4
-    network = "Unet"  # 模型名， 或实验名称
+    network = "shuffle_Unet"  # 模型名， 或实验名称
     note = ""  # 标签(区分不同训练设置)
     Ulikenet_channel_reduction = 2  # 类Unet模型通道衰减数(默认通道减半)
     backbone = "resnet34"  # 继承自SegBaseModel的模型backbone
@@ -34,22 +37,23 @@ class basic_setting():
     aux = False
 
     # #################################### train settings ####################################
-    test_3D = True
-    optim = "Adam"
+    optim = "SGD"
     class_weight = [0.25, 0.25, 0.25, 0.25]
     OHEM = False
-    num_epochs = 100
-    batch_size = 8
+    num_epochs = 60
+    batch_size = 6
     num_workers = 16
     aux_weight = 0.25
     dice_weight = 1.0
-    lr = 0.0001
+    lr = 0.01
     momentum = 0.9
     weight_decay = 1e-4
     # cuda_id = "0"
 
     # #################################### test settings ####################################
-    test_run_file = "2021-0103-2146_34_channel_gcn_Net__fold_4_82.00"
+    test_3D = True
+    drop_non = True
+    test_run_file = "2021-0112-0104_54_channel_gcn_Net__fold_3"
     label_names = ["bg", "0", "1", "2"]
     plot = True  # 保存测试预测图片
 

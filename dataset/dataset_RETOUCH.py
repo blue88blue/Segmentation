@@ -89,7 +89,7 @@ class myDataset(Dataset):
 
 
 class volume_Dataset(Dataset):
-    def __init__(self, data_root, target_root, crop_size, k_fold=3, num_fold=None):
+    def __init__(self, data_root, target_root, crop_size):
         super(volume_Dataset, self).__init__()
         self.mean = mean
         self.std = std
@@ -98,7 +98,7 @@ class volume_Dataset(Dataset):
         self.crop_size = crop_size
 
         self.files = sorted(os.listdir(data_root))
-        print(f"pred dataset:{len(self.files)}")
+        # print(f"pred dataset:{len(self.files)}")
 
     def __len__(self):
         return len(self.files)

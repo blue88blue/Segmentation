@@ -48,6 +48,7 @@ class basic_setting():
     # cuda_id = "0"
 
     # #################################### test settings ####################################
+    drop_non = False
     test_run_file = "2021-0103-2146_34_channel_gcn_Net__fold_4_82.00"
     label_names = ["bg", "atrophy"]
     plot = True  # 保存测试预测图片

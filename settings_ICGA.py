@@ -2,32 +2,30 @@ import os
 import time
 import csv
 import shutil
-from dataset.dataset_ISIC import *
-
-resize_data('/media/sjh/disk1T/dataset/ISIC/ISIC2018_Task1-2_Training_Input', "/media/sjh/disk1T/dataset/ISIC/ISIC2018_Task1_Training_GroundTruth", size=(512, 384))
+from dataset.dataset_ICGA import *
 
 class basic_setting():
 
     mode = "train_test"                             # train,  test,  train_test
-    k_fold = 5                              # None 不交叉验证 验证集即为训练集
+    k_fold = 4                              # None 不交叉验证 验证集即为训练集
     start_fold = 0
-    end_fold = 1
+    end_fold = 4
 
     # #################################### train Data settings ####################################
-    dataset_file_list = "utils/ISIC_dataset_list.csv"  # 交叉验证所需文件名列表
-    data_root = '/media/sjh/disk1T/dataset/ISIC/ISIC2018_Task1-2_Training_Input_resize'
-    target_root = "/media/sjh/disk1T/dataset/ISIC/ISIC2018_Task1_Training_GroundTruth_resize"  # 标签
-    crop_size = (192, 256)
+    dataset_file_list = "utils/ICGA_dataset_list.csv"  # 交叉验证所需文件名列表
+    data_root = '/home/sjh/dataset/ICGA/image'
+    target_root = '/home/sjh/dataset/ICGA/mask'
+    crop_size = (512, 512)
 
     # #################################### train file settings ####################################
-    run_dir = "/media/sjh/disk1T/RUNS/ISIC"                  # 数据集名称
+    run_dir = "/media/sjh/disk1T/RUNS/ICGA"                      # 数据集名称
     val_step = 2                          # 每训练几个epoch进行一次验证
 
     # #################################### model settings ####################################
     in_channel = 3
     n_class = 2
-    network = "ResUnet"  # 模型名， 或实验名称
-    note = "200label"  # 标签(区分不同训练设置)
+    network = "BiNet"  # 模型名， 或实验名称
+    note = ""  # 标签(区分不同训练设置)
     Ulikenet_channel_reduction = 2  # 类Unet模型通道衰减数(默认通道减半)
     backbone = "resnet34"  # 继承自SegBaseModel的模型backbone
     pretrained = True
@@ -40,10 +38,10 @@ class basic_setting():
     class_weight = [0.5, 0.5]
     OHEM = False
     num_epochs = 100
-    batch_size = 8
-    num_workers = 12
-    aux_weight = 0.5
-    dice_weight = 0.5
+    batch_size = 4
+    num_workers = 8
+    aux_weight = 0.25
+    dice_weight = 1.0
     lr = 0.01
     momentum = 0.9
     weight_decay = 1e-4
@@ -51,14 +49,14 @@ class basic_setting():
 
     # #################################### test settings ####################################
     drop_non = False
-    test_run_file = "2020-1012-2205_29_EMANet_midEMA+SF-NOc1_fold_4"
+    test_run_file = "2021-0103-2146_34_channel_gcn_Net__fold_4_82.00"
     label_names = ["bg", "atrophy"]
     plot = True  # 保存测试预测图片
 
 
     def __init__(self):
-        if not os.path.exists("./runs"):
-            os.mkdir("./runs")
+        # if not os.path.exists("./runs"):
+        #     os.mkdir("./runs")
         # self.run_dir = "./runs/"+self.run_dir
         if not os.path.exists(self.run_dir):
             os.mkdir(self.run_dir)
@@ -96,6 +94,7 @@ class basic_setting():
                     self.log_dir.append(log_i_dir)
             shutil.copytree('.', os.path.join(self.dir, "code"), shutil.ignore_patterns(['.git', '__pycache__']))
 
+
         if self.mode == "test" or self.mode == "train_test":
             if self.mode == "test":
                 self.dir = os.path.join(self.run_dir, self.test_run_file)
@@ -124,7 +123,6 @@ class basic_setting():
                 self.plot_save_dir = os.path.join(self.dir, "test_images")
                 if not os.path.exists(self.plot_save_dir):
                     os.mkdir(self.plot_save_dir)
-
 
     # 记录训练参数与信息
     def logger(self, file):

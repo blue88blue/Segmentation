@@ -12,13 +12,13 @@ if __name__ == "__main__":
     mode = "train"
     dataset = myDataset(data_root, target_root, crop_size, mode, k_fold=3, imagefile_csv=None, num_fold=3)
 
-    batch = dataset[421]
+    batch = dataset[45]
     image = batch["image"]
     label = batch["label"]
     # edge_label = batch["edge_label"]
 
-    save_image(image, "image.jpg")
-    save_image(label, "label.png")
+    save_image(image*0.1052+0.2294587, "image.jpg")
+    save_image(label/4, "label.png")
     # save_image(edge_label, "edge_label.png", normalize=True)
 
     print(batch["file"])

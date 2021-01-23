@@ -4,4 +4,5 @@ tqdm
 SimpleITK
 h5py
 tensorboard
+opencv-python
 torchsummary

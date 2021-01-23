@@ -6,6 +6,7 @@ import glob
 
 def get_mean_var(image_dir, list_name, ignore_value=-1, channel=3):
     image_list = sorted(os.listdir(image_dir))
+    image_list = [file for file in image_list if "seg" not in file]
     mv_list = ['imgName']+['Mean']*channel+['Var']*channel
     M = []
     V = []
@@ -64,7 +65,7 @@ def get_mean_var1(image_dir, list_name, ignore_value=-1, channel=1):
         w.writerow(['m']+list(m))
         w.writerow(['v']+list(v))
 
-get_mean_var1('/media/sjh/disk1T/dataset/RETOUCH_crop/train_all/img', "RETOUCH_mv.csv")
+get_mean_var("/home/sjh/dataset/PLAM/data620/crop_512", "PM_data620_mv.csv", channel=3)
 
 
 

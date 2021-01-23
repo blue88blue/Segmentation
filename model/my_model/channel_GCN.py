@@ -35,10 +35,9 @@ class channel_gcn(nn.Module):
 
         # GCN 得到通道注意力
         nodes = self.gcn(nodes)
-        v = nodes.view(b, -1, 1, 1)
+        v = torch.sigmoid(nodes.view(b, -1, 1, 1))
 
-        return x+v
-
+        return x*v
 
 
 
@@ -55,9 +54,9 @@ class channel_gcn_Net(SegBaseModel):
             conv1_channel = 64
 
 
-        self.chGCN1 = channel_gcn(channels[3], 16)
-        self.chGCN2 = channel_gcn(channels[2], 16)
-        self.chGCN3 = channel_gcn(channels[1], 16)
+        self.chGCN1 = channel_gcn(channels[3], 64)
+        self.chGCN2 = channel_gcn(channels[2], 32)
+        self.chGCN3 = channel_gcn(channels[1], 32)
         self.chGCN4 = channel_gcn(channels[0], 16)
         self.chGCN5 = channel_gcn(conv1_channel, 16)
 

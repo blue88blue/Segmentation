@@ -49,9 +49,9 @@ def random_GaussianBlur(img, r=0.4):
 # 随机变换
 def random_transfrom(image, label=None):
     # image = random_Color(image)
-    image, label = random_Rotate(image, label)
-    image = random_Contrast(image)
-    image = random_Brightness(image)
+    image, label = random_Rotate(image, label, 60)
+    image = random_Contrast(image, 0.2)
+    image = random_Brightness(image, 0.2)
     # image = random_GaussianBlur(image)
     return image, label
 
@@ -71,9 +71,10 @@ def fetch(image_path, label_path=None):
     return image, label
 
 # image转为tensor
-def convert_to_tensor(image, label=None, mean=0.5, std=0.5):
+def convert_to_tensor(image, label=None, mean=0.5, std=0.5, norm=True):
     image = torch.FloatTensor(np.array(image)) / 255
-    image = (image - mean) / std
+    if norm:
+        image = (image - mean) / std
 
     if len(image.size()) == 2:
         image = image.unsqueeze(0)
