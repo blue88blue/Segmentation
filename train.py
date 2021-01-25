@@ -262,11 +262,12 @@ def test(model, device, args, num_fold=0):
         best_epoch = args.num_epochs
 
     # 导入模型
-    model_list = os.listdir(args.checkpoint_dir[num_fold])
-    model_dir = [x for x in model_list if str(best_epoch) in x][0]
-    model_dir = os.path.join(args.checkpoint_dir[num_fold], model_dir)
-    if not os.path.exists(model_dir):
-        model_dir = os.path.join(args.checkpoint_dir[num_fold], f'CP_epoch{best_epoch}.pth')
+    # model_list = os.listdir(args.checkpoint_dir[num_fold])
+    # model_dir = [x for x in model_list if str(best_epoch) in x][0]
+    # model_dir = os.path.join(args.checkpoint_dir[num_fold], model_dir)
+    # if not os.path.exists(model_dir):
+    #     model_dir = os.path.join(args.checkpoint_dir[num_fold], f'CP_epoch{best_epoch}.pth')
+    model_dir = "/media/sjh/disk1T/RUNS/PALM/2020-1016-2108_18_EMUPNet__fold_4__82.61/checkpoints/fold_1/CP_epoch250.pth"
     model.load_state_dict(torch.load(model_dir, map_location=device))
     print(f'\rtest model loaded: [fold:{num_fold}] [best_epoch:{best_epoch}]')
 

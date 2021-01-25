@@ -4,9 +4,10 @@ import torch.nn.functional as F
 from .model_utils import init_weights, _FCNHead
 from .my_model.ccr import EMA_UP_docoder
 from .my_model.Class_GCN import class_gcn_2
+from .my_model.blocks import *
 
 class double_conv(nn.Module):
-    def __init__(self, in_channel, out_channel):
+    def __init__(self, in_channel, out_channel, se=False):
         super().__init__()
 
         self.dconv = nn.Sequential(
@@ -17,8 +18,14 @@ class double_conv(nn.Module):
             nn.BatchNorm2d(out_channel),
             nn.ReLU(),
         )
+        self.se = se
+        if se:
+            self.se_layer = SELayer(out_channel)
+
     def forward(self, x):
         x = self.dconv(x)
+        if self.se:
+            x = self.se_layer(x)
         return x
 
 

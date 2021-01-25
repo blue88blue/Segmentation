@@ -127,6 +127,6 @@ class SegNet(nn.Module):
         # Stage 1d
         x1d = F.max_unpool2d(x21d, id1, kernel_size=2, stride=1)
         x12d = F.relu(self.bn12d(self.conv12d(x1d)))
-        x11d = self.conv11d(x12d)
+        out = self.conv11d(x12d)
 
-        return x11d
+        return {"main_out": out}

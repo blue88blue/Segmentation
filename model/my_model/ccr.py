@@ -178,86 +178,28 @@ class ccr(nn.Module):
 
 
 
-# class EMA_UP_docoder(nn.Module):
-#     def __init__(self, channel_h, channel_l, k=32):
-#         super().__init__()
-#         self.channel = channel_h + channel_l
-#
-#         self.conv_in_h = nn.Conv2d(channel_h, channel_h, kernel_size=1)
-#         self.conv_in_l = nn.Conv2d(channel_l, channel_l, kernel_size=1)
-#
-#         self.em = EM(self.channel, k=k)
-#
-#         self.conv_trans_low = nn.Conv2d(self.channel, self.channel, kernel_size=1)
-#
-#         self.conv_gobal = nn.Conv2d(self.channel, self.channel, kernel_size=1)
-#         self.pool = nn.AdaptiveAvgPool2d(1)
-#         self.conv_trans_attention = nn.Conv2d(self.channel, self.channel, kernel_size=1)
-#
-#         self.rebuild_conv = nn.Sequential(
-#                         nn.Conv2d(self.channel, self.channel, 1, bias=False),
-#                         nn.BatchNorm2d(self.channel),
-#                         nn.ReLU())
-#         self.conv_out = nn.Sequential(
-#                         nn.Conv2d(self.channel*2, channel_l, kernel_size=1, bias=False),
-#                         nn.BatchNorm2d(channel_l),
-#                         nn.ReLU())
-#
-#     def forward(self, x_h, x_l):
-#         # Multi-scale features fusion.
-#         x_h = self.conv_in_h(x_h)
-#         x_l = self.conv_in_l(x_l)
-#         x_h_up = F.interpolate(x_h, size=x_l.size()[-2:], mode="bilinear", align_corners=True)
-#         x_l_down = F.interpolate(x_l, size=x_h.size()[-2:], mode="bilinear", align_corners=True)
-#         m_deep = torch.cat((x_l_down, x_h), dim=1)
-#         m_low = torch.cat((x_l, x_h_up), dim=1)
-#
-#         # Holistic codebook generation.
-#         em_out = self.em(m_deep)
-#         base = em_out["mu"]
-#
-#         # Codeword assembly for high-resolution feature upsampling.
-#         m_low = self.conv_trans_low(m_low)  # (b, 1024, h/8, w/8)
-#         W = self.conv_trans_attention(m_low + self.pool(self.conv_gobal(m_deep)))  # (b, 1024, h/8, w/8)
-#         b, c, h, w = W.size()
-#         W = W.view(b, c, -1).permute(0, 2, 1)  # (b, h/8*w/8, 1024)
-#         similarity = F.softmax(torch.bmm(W, base).permute(0, 2, 1), dim=1)  # (b, k, hw)
-#         m_up = torch.bmm(base, similarity).view(b, c, h, w)  #(b, c, hw)
-#         m_up = self.rebuild_conv(m_up)
-#
-#         f = torch.cat((m_up, m_low), dim=1)
-#         out = self.conv_out(f)
-#
-#         return {"out": out,
-#                 "base": base,
-#                 "A": similarity.view(b, -1, h, w)}
-
-
-
-# EM-x
 class EMA_UP_docoder(nn.Module):
-    def __init__(self, channel_h, channel_l, k=64):
+    def __init__(self, channel_h, channel_l, k=32):
         super().__init__()
         self.channel = channel_h + channel_l
-        self.inter_channel = self.channel//2
 
-        self.conv_in_h = conv_bn_relu(channel_h, channel_h, kernel_size=1, padding=0)
-        self.conv_in_l = conv_bn_relu(channel_l, channel_l, kernel_size=1, padding=0)
+        self.conv_in_h = nn.Conv2d(channel_h, channel_h, kernel_size=1)
+        self.conv_in_l = nn.Conv2d(channel_l, channel_l, kernel_size=1)
 
-        self.em = EM(self.channel, k=k, inter_channel=self.inter_channel)
+        self.em = EM(self.channel, k=k)
 
-        self.conv_trans_low = nn.Conv2d(self.channel, self.inter_channel, kernel_size=1, padding=0)
+        self.conv_trans_low = nn.Conv2d(self.channel, self.channel, kernel_size=1)
 
+        self.conv_gobal = nn.Conv2d(self.channel, self.channel, kernel_size=1)
         self.pool = nn.AdaptiveAvgPool2d(1)
-        self.conv_trans_attention = nn.Conv2d(self.inter_channel, self.inter_channel, kernel_size=1)
+        self.conv_trans_attention = nn.Conv2d(self.channel, self.channel, kernel_size=1)
 
         self.rebuild_conv = nn.Sequential(
-                        nn.Conv2d(self.inter_channel, self.inter_channel, 1, bias=False),
-                        nn.BatchNorm2d(self.inter_channel),
+                        nn.Conv2d(self.channel, self.channel, 1, bias=False),
+                        nn.BatchNorm2d(self.channel),
                         nn.ReLU())
-
         self.conv_out = nn.Sequential(
-                        nn.Conv2d(self.inter_channel*2, channel_l, kernel_size=1, bias=False),
+                        nn.Conv2d(self.channel*2, channel_l, kernel_size=1, bias=False),
                         nn.BatchNorm2d(channel_l),
                         nn.ReLU())
 
@@ -273,11 +215,10 @@ class EMA_UP_docoder(nn.Module):
         # Holistic codebook generation.
         em_out = self.em(m_deep)
         base = em_out["mu"]
-        x = em_out["x_trans"]
 
         # Codeword assembly for high-resolution feature upsampling.
         m_low = self.conv_trans_low(m_low)  # (b, 1024, h/8, w/8)
-        W = self.conv_trans_attention(m_low + self.pool(x))   # (b, 1024, h/8, w/8)
+        W = self.conv_trans_attention(m_low + self.pool(self.conv_gobal(m_deep)))  # (b, 1024, h/8, w/8)
         b, c, h, w = W.size()
         W = W.view(b, c, -1).permute(0, 2, 1)  # (b, h/8*w/8, 1024)
         similarity = F.softmax(torch.bmm(W, base).permute(0, 2, 1), dim=1)  # (b, k, hw)
@@ -290,6 +231,65 @@ class EMA_UP_docoder(nn.Module):
         return {"out": out,
                 "base": base,
                 "A": similarity.view(b, -1, h, w)}
+
+
+#
+# # EM-x
+# class EMA_UP_docoder(nn.Module):
+#     def __init__(self, channel_h, channel_l, k=64):
+#         super().__init__()
+#         self.channel = channel_h + channel_l
+#         self.inter_channel = self.channel//2
+#
+#         self.conv_in_h = conv_bn_relu(channel_h, channel_h, kernel_size=1, padding=0)
+#         self.conv_in_l = conv_bn_relu(channel_l, channel_l, kernel_size=1, padding=0)
+#
+#         self.em = EM(self.channel, k=k, inter_channel=self.inter_channel)
+#
+#         self.conv_trans_low = nn.Conv2d(self.channel, self.inter_channel, kernel_size=1, padding=0)
+#
+#         self.pool = nn.AdaptiveAvgPool2d(1)
+#         self.conv_trans_attention = nn.Conv2d(self.inter_channel, self.inter_channel, kernel_size=1)
+#
+#         self.rebuild_conv = nn.Sequential(
+#                         nn.Conv2d(self.inter_channel, self.inter_channel, 1, bias=False),
+#                         nn.BatchNorm2d(self.inter_channel),
+#                         nn.ReLU())
+#
+#         self.conv_out = nn.Sequential(
+#                         nn.Conv2d(self.inter_channel*2, channel_l, kernel_size=1, bias=False),
+#                         nn.BatchNorm2d(channel_l),
+#                         nn.ReLU())
+#
+#     def forward(self, x_h, x_l):
+#         # Multi-scale features fusion.
+#         x_h = self.conv_in_h(x_h)
+#         x_l = self.conv_in_l(x_l)
+#         x_h_up = F.interpolate(x_h, size=x_l.size()[-2:], mode="bilinear", align_corners=True)
+#         x_l_down = F.interpolate(x_l, size=x_h.size()[-2:], mode="bilinear", align_corners=True)
+#         m_deep = torch.cat((x_l_down, x_h), dim=1)
+#         m_low = torch.cat((x_l, x_h_up), dim=1)
+#
+#         # Holistic codebook generation.
+#         em_out = self.em(m_deep)
+#         base = em_out["mu"]
+#         x = em_out["x_trans"]
+#
+#         # Codeword assembly for high-resolution feature upsampling.
+#         m_low = self.conv_trans_low(m_low)  # (b, 1024, h/8, w/8)
+#         W = self.conv_trans_attention(m_low + self.pool(x))   # (b, 1024, h/8, w/8)
+#         b, c, h, w = W.size()
+#         W = W.view(b, c, -1).permute(0, 2, 1)  # (b, h/8*w/8, 1024)
+#         similarity = F.softmax(torch.bmm(W, base).permute(0, 2, 1), dim=1)  # (b, k, hw)
+#         m_up = torch.bmm(base, similarity).view(b, c, h, w)  #(b, c, hw)
+#         m_up = self.rebuild_conv(m_up)
+#
+#         f = torch.cat((m_up, m_low), dim=1)
+#         out = self.conv_out(f)
+#
+#         return {"out": out,
+#                 "base": base,
+#                 "A": similarity.view(b, -1, h, w)}
 #
 # #  残差连接
 # class EMA_UP_docoder(nn.Module):

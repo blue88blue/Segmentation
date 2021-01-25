@@ -7,6 +7,19 @@ from .base_models.EfficientNet.model import EfficientNet
 from .base_models.resnext import resnext34
 from .base_models.resnest import resnest50, resnest101
 
+
+def initialize_weights(*models):
+    for model in models:
+        for m in model.modules():
+            if isinstance(m, nn.Conv2d) or isinstance(m, nn.Linear):
+                nn.init.kaiming_normal_(m.weight)
+                if m.bias is not None:
+                    m.bias.data.zero_()
+            elif isinstance(m, nn.BatchNorm2d):
+                m.weight.data.fill_(1)
+                m.bias.data.zero_()
+
+
 class SegBaseModel(nn.Module):
     r"""Base Model for Semantic Segmentation
 
@@ -79,6 +92,8 @@ class SegBaseModel(nn.Module):
         #     p.requires_grad = False
         # for p in self.backbone.layer2.parameters():
         #     p.requires_grad = False
+        if pretrained_base == False:
+            initialize_weights(self)
 
 
     def base_forward(self, x):

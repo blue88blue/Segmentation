@@ -6,8 +6,8 @@ from dataset.dataset_PMdata620 import *
 
 class basic_setting():
 
-    mode = "train_test"                             # train,  test,  train_test
-    k_fold = 3                              # None 不交叉验证 验证集即为训练集
+    mode = "test"                             # train,  test,  train_test
+    k_fold = None                              # None 不交叉验证 验证集即为训练集
     start_fold = 0
     end_fold = k_fold
 
@@ -18,13 +18,13 @@ class basic_setting():
     crop_size = (512, 512)
 
     # #################################### train file settings ####################################
-    run_dir = "/media/sjh/disk1T/RUNS/PMdata620"                      # 数据集名称
+    run_dir = "/media/sjh/disk1T/RUNS/PALM"                      # 数据集名称
     val_step = 2                          # 每训练几个epoch进行一次验证
 
     # #################################### model settings ####################################
     in_channel = 3
     n_class = 2
-    network = "ResUnet"  # 模型名， 或实验名称
+    network = "EMUPNet"  # 模型名， 或实验名称
     note = ""  # 标签(区分不同训练设置)
     Ulikenet_channel_reduction = 2  # 类Unet模型通道衰减数(默认通道减半)
     backbone = "resnet34"  # 继承自SegBaseModel的模型backbone
@@ -49,7 +49,7 @@ class basic_setting():
 
     # #################################### test settings ####################################
     drop_non = False
-    test_run_file = "2021-0103-2146_34_channel_gcn_Net__fold_4_82.00"
+    test_run_file = "2020-1016-2108_18_EMUPNet__fold_4__82.61"
     label_names = ["bg", "atrophy"]
     plot = True  # 保存测试预测图片
 
