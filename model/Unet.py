@@ -5,6 +5,7 @@ from .model_utils import init_weights, _FCNHead
 from .my_model.ccr import EMA_UP_docoder
 from .my_model.Class_GCN import class_gcn_2
 from .my_model.blocks import *
+from .my_model.channel_GCN import channel_gcn
 
 class double_conv(nn.Module):
     def __init__(self, in_channel, out_channel, se=False):
