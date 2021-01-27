@@ -97,7 +97,10 @@ class AG_Net(nn.Module):
         side_8 = self.side_8(side_8)
 
         ave_out = (side_5+side_6+side_7+side_8)/4
-        return [ave_out, side_5, side_6, side_7, side_8]
+        outputs = dict()
+        outputs.update({"main_out": ave_out})
+        outputs.update({"aux_out": [side_5, side_6, side_7, side_8]})
+        return outputs
 
 
 class GridAttentionBlock(nn.Module):

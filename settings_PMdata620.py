@@ -6,8 +6,8 @@ from dataset.dataset_PMdata620 import *
 
 class basic_setting():
 
-    mode = "test"                             # train,  test,  train_test
-    k_fold = None                              # None 不交叉验证 验证集即为训练集
+    mode = "train_test"                             # train,  test,  train_test
+    k_fold = 3                              # None 不交叉验证 验证集即为训练集
     start_fold = 0
     end_fold = k_fold
 
@@ -18,20 +18,20 @@ class basic_setting():
     crop_size = (512, 512)
 
     # #################################### train file settings ####################################
-    run_dir = "/media/sjh/disk1T/RUNS/PALM"                      # 数据集名称
+    run_dir = "/media/sjh/disk1T/RUNS/PMdata620"                      # 数据集名称
     val_step = 2                          # 每训练几个epoch进行一次验证
 
     # #################################### model settings ####################################
     in_channel = 3
     n_class = 2
-    network = "EMUPNet"  # 模型名， 或实验名称
+    network = "class_gcn_Net"  # 模型名， 或实验名称
     note = ""  # 标签(区分不同训练设置)
     Ulikenet_channel_reduction = 2  # 类Unet模型通道衰减数(默认通道减半)
     backbone = "resnet34"  # 继承自SegBaseModel的模型backbone
     pretrained = True
     dilated = False
     deep_stem = False
-    aux = False
+    aux = True
 
     # #################################### train settings ####################################
     optim = "Adam"
@@ -83,6 +83,11 @@ class basic_setting():
             os.mkdir(self.checkpoint_dir)
             self.checkpoint_dir = [self.checkpoint_dir]
 
+            # 中间结果
+            self.temp = os.path.join(self.dir, "temp")
+            if not os.path.exists(self.temp):
+                os.mkdir(self.temp)
+
             # 交叉验证的模型保存路径
             if self.k_fold is not None:
                 for i in range(self.k_fold):
@@ -93,6 +98,7 @@ class basic_setting():
                     self.checkpoint_dir.append(cp_i_dir)
                     self.log_dir.append(log_i_dir)
             shutil.copytree('.', os.path.join(self.dir, "code"), shutil.ignore_patterns(['.git', '__pycache__']))
+
 
 
         if self.mode == "test" or self.mode == "train_test":

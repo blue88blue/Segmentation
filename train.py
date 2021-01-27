@@ -86,7 +86,7 @@ def train(model, device, args, num_fold=0):
     else:
         criterion = nn.CrossEntropyLoss(torch.tensor(args.class_weight, device=device))
     criterion_dice = DiceLoss(ignore_index=0)
-    criterion_df = nn.MSELoss()
+    criterion_flaw = nn.CrossEntropyLoss()
     criterion_edge = nn.MSELoss()
 
     cp_manager = utils.save_checkpoint_manager(3)
@@ -100,9 +100,9 @@ def train(model, device, args, num_fold=0):
                 # 读取训练数据
                 image = batch["image"]
                 label = batch["label"]
-                print(image.size(), label.size(), torch.unique(label))
-                save_image(image, "image.png")
-                save_image(label.unsqueeze(1), "label.png")
+                # print(image.size(), label.size(), torch.unique(label))
+                # save_image(image, "image.png")
+                # save_image(label.unsqueeze(1), "label.png")
 
                 assert len(image.size()) == 4
                 assert len(label.size()) == 3
@@ -119,11 +119,11 @@ def train(model, device, args, num_fold=0):
                 celoss = criterion(main_out, label)
                 totall_loss = celoss + diceloss * args.dice_weight
 
-                if "df" in outputs.keys():
-                    df = outputs["df"]
-                    gt_df = batch["df"].to(device, dtype=torch.float32)
-                    loss_df = criterion_df(df, gt_df)
-                    totall_loss += loss_df
+                if "flaw_out" in outputs.keys():
+                    flaw_out = outputs["flaw_out"]
+                    flaw_gt = (label != F.softmax(main_out, dim=1).max(dim=1)[1]).float()
+                    loss_flaw = criterion_flaw(flaw_out, flaw_gt.to(device, dtype=torch.long))
+                    totall_loss += loss_flaw
 
                 if "edge" in outputs.keys():
                     edge = outputs["edge"]
@@ -172,8 +172,8 @@ def train(model, device, args, num_fold=0):
                         writer.add_scalar("Train/aux_losses",aux_losses, step)
                     if "sim_loss" in outputs.keys():
                         writer.add_scalar("Train/sim_loss", outputs["sim_loss"], step)
-                    if "df" in outputs.keys():
-                        writer.add_scalar("Train/df_loss", loss_df, step)
+                    if "flaw_out" in outputs.keys():
+                        writer.add_scalar("Train/loss_flaw", loss_flaw, step)
                     if "edge" in outputs.keys():
                         writer.add_scalar("Train/edge_loss", loss_edge, step)
                     writer.add_scalar("Train/Totall_loss", totall_loss.item(), step)
@@ -183,6 +183,11 @@ def train(model, device, args, num_fold=0):
 
 
         if (epoch+1) % args.val_step == 0:
+            if "flaw_out" in outputs.keys():
+                save_image(main_out.max(dim=1)[1].float().unsqueeze(1), os.path.join(args.temp, f"main_out{epoch + 1}.png"))
+                save_image(flaw_out.max(dim=1)[1].float().unsqueeze(1), os.path.join(args.temp, f"flaw_out{epoch + 1}.png"))
+                save_image(label.float().unsqueeze(1), os.path.join(args.temp, f"label{epoch + 1}.png"))
+                save_image(flaw_gt.unsqueeze(1), os.path.join(args.temp, f"flaw_gt{epoch + 1}.png"))
             # 验证
             if hasattr(args, 'test_3D'):
                 mDice, mIoU, mAcc, mSensitivity, mSpecificity = val_3D(model, device, args, num_fold)
@@ -262,12 +267,11 @@ def test(model, device, args, num_fold=0):
         best_epoch = args.num_epochs
 
     # 导入模型
-    # model_list = os.listdir(args.checkpoint_dir[num_fold])
-    # model_dir = [x for x in model_list if str(best_epoch) in x][0]
-    # model_dir = os.path.join(args.checkpoint_dir[num_fold], model_dir)
-    # if not os.path.exists(model_dir):
-    #     model_dir = os.path.join(args.checkpoint_dir[num_fold], f'CP_epoch{best_epoch}.pth')
-    model_dir = "/media/sjh/disk1T/RUNS/PALM/2020-1016-2108_18_EMUPNet__fold_4__82.61/checkpoints/fold_1/CP_epoch250.pth"
+    model_list = os.listdir(args.checkpoint_dir[num_fold])
+    model_dir = [x for x in model_list if str(best_epoch) in x][0]
+    model_dir = os.path.join(args.checkpoint_dir[num_fold], model_dir)
+    if not os.path.exists(model_dir):
+        model_dir = os.path.join(args.checkpoint_dir[num_fold], f'CP_epoch{best_epoch}.pth')
     model.load_state_dict(torch.load(model_dir, map_location=device))
     print(f'\rtest model loaded: [fold:{num_fold}] [best_epoch:{best_epoch}]')
 

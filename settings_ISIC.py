@@ -85,6 +85,11 @@ class basic_setting():
             os.mkdir(self.checkpoint_dir)
             self.checkpoint_dir = [self.checkpoint_dir]
 
+            # 中间结果
+            self.temp = os.path.join(self.dir, "temp")
+            if not os.path.exists(self.temp):
+                os.mkdir(self.temp)
+
             # 交叉验证的模型保存路径
             if self.k_fold is not None:
                 for i in range(self.k_fold):

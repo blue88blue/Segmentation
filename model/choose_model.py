@@ -25,6 +25,7 @@ from model.my_model.BiNet import BiNet, BiNet_baseline
 from model.my_model.channel_GCN import channel_gcn_Net
 from model.my_model.shuffle_Net import shuffle_Unet
 from model.CSNet import CSNet
+from model.my_model.Flaw_Unet import Flaw_Unet
 
 def seg_model(args):
     if args.network == "Unet":
@@ -83,6 +84,8 @@ def seg_model(args):
         model = shuffle_Unet(args.in_channel, args.n_class, channel_reduction=args.Ulikenet_channel_reduction, aux=args.aux)
     elif args.network == "CSNet":
         model = CSNet(args.in_channel, args.n_class)
+    elif args.network == "Flaw_Unet":
+        model = Flaw_Unet(args.in_channel, args.n_class)
     else:
         NotImplementedError("not implemented {args.network} model")
 
